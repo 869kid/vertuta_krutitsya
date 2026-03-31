@@ -1,4 +1,4 @@
-import { FC, ReactNode } from 'react';
+import { FC, ReactNode, RefObject } from 'react';
 import clsx from 'clsx';
 import { Title } from '@mantine/core';
 
@@ -12,13 +12,25 @@ interface PageContainerProps {
   classes?: {
     content?: string;
   };
+  contentId?: string;
+  contentRef?: RefObject<HTMLDivElement | null>;
 }
 
-const PageContainer: FC<PageContainerProps> = ({ title, children, className, classes, fixedHeight }) => {
+const PageContainer: FC<PageContainerProps> = ({
+  title,
+  children,
+  className,
+  classes,
+  fixedHeight,
+  contentId,
+  contentRef,
+}) => {
   return (
     <div className={clsx(className, styles.pageContainer, { [styles.fixedHeight]: fixedHeight })}>
       {!!title && (typeof title === 'string' ? <Title order={1}>{title}</Title> : title)}
-      <div className={clsx(styles.pageContainerContent, classes?.content)}>{children}</div>
+      <div className={clsx(styles.pageContainerContent, classes?.content)} id={contentId} ref={contentRef}>
+        {children}
+      </div>
     </div>
   );
 };

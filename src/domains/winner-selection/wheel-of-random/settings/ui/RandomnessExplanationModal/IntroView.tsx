@@ -23,8 +23,6 @@ const IntroView = ({ onSourceClick }: IntroViewProps) => {
         <Text size='sm'>{t('wheel.randomnessModal.intro.tldrNote')}</Text>
       </Alert>
 
-      <Text>{t('wheel.randomnessModal.intro.choosePrompt')}</Text>
-
       <Grid gutter='md'>
         <Grid.Col span={4}>
           <Card
@@ -92,4 +90,3 @@ const IntroView = ({ onSourceClick }: IntroViewProps) => {
 };
 
 export default IntroView;
-

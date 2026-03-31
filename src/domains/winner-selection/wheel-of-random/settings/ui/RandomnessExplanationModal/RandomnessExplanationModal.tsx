@@ -1,4 +1,4 @@
-import { Modal } from '@mantine/core';
+import { Modal, Text, Title } from '@mantine/core';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -68,7 +68,11 @@ const RandomnessExplanationModal = ({ opened, onClose, initialTab }: RandomnessE
     <Modal
       opened={opened}
       onClose={onClose}
-      title={t('wheel.randomnessModal.title')}
+      title={
+        <Title order={3} c='dimmed'>
+          {t('wheel.randomnessModal.title')}
+        </Title>
+      }
       size='xl'
       centered
       padding='lg'

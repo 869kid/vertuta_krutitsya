@@ -1,24 +1,26 @@
-import { RefObject, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { WheelFormat } from '@constants/wheel.ts';
 
+import { DropoutVariant } from '../../BaseWheel/BaseWheel';
 import useBattleRoyale from '../../Duel/lib/useBattleRoyale';
 import useNormalWheel from '../../lib/strategy/useNormalWheel';
 import useRuntimeDropout from '../../Dropout/lib/useRuntimeDropout';
 import useSimulationDropout from '../../Dropout/lib/useSimulationDropout';
-import { DropoutVariant, WheelController } from '../../BaseWheel/BaseWheel';
 
-interface Props {
-  format: WheelFormat;
-  dropoutVariant: DropoutVariant;
-  controller: RefObject<WheelController | null>;
-}
+import { WheelResolverProps } from './types';
 
-const useWheelResolver = ({ format, dropoutVariant, controller }: Props): Wheel.FormatHook => {
-  const normalWheel = useNormalWheel();
+const useWheelResolver = ({
+  format,
+  dropoutVariant,
+  controller,
+  isTicketRevealed,
+  resetTicket,
+}: WheelResolverProps): Wheel.FormatHook => {
+  const normalWheel = useNormalWheel({ isTicketRevealed, resetTicket });
   const battleRoyal = useBattleRoyale(controller);
   const runtimeDropout = useRuntimeDropout(controller);
-  const simulationDropout = useSimulationDropout(controller);
+  const simulationDropout = useSimulationDropout({ controller, isTicketRevealed, resetTicket });
 
   return useMemo(() => {
     if (format === WheelFormat.Dropout) {

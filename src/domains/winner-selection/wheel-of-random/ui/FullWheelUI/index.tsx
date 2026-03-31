@@ -184,26 +184,6 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
     [],
   );
 
-  useEffect(() => {
-    wheelController.current?.resetPosition();
-    wheelController.current?.clearWinner();
-  }, [format, dropoutVariant]);
-
-  const wheelStrategy = useWheelResolver({ format, dropoutVariant, controller: wheelController });
-  const { items, init, extraSettings, renderSubmitButton, onSpinEnd, content } = wheelStrategy;
-
-  const filteredItems = useMemo(() => {
-    const filtered = getTotalSize(itemsFromProps)
-      ? itemsFromProps.filter(({ amount }) => amount && amount > 0)
-      : itemsFromProps.map((item) => ({ ...item, amount: 1 }));
-
-    return filtered.sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name));
-  }, [itemsFromProps]);
-
-  useSyncEffect(() => {
-    init?.(filteredItems);
-  }, [init, filteredItems]);
-
   const randomOrgTicketQuery = useQuery({
     queryKey: ['random-org-ticket', activeTicketId],
     queryFn: () =>
@@ -220,6 +200,41 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
     enabled: !!activeTicketId,
     staleTime: 1000 * 60 * 60,
   });
+
+  const visibleRevealedData: RevealedData | null = randomOrgTicketQuery.data
+    ? {
+        ticketId: randomOrgTicketQuery.data.result.ticketId,
+        createdAt: randomOrgTicketQuery.data.result.creationTime,
+        revealedAt: randomOrgTicketQuery.data.result.usedTime,
+        randomNumber: shouldRevealNumber ? randomOrgTicketQuery.data.result.random.data[0] : null,
+      }
+    : null;
+
+  useEffect(() => {
+    wheelController.current?.resetPosition();
+    wheelController.current?.clearWinner();
+  }, [format, dropoutVariant]);
+
+  const wheelStrategy = useWheelResolver({
+    format,
+    dropoutVariant,
+    controller: wheelController,
+    isTicketRevealed: !!visibleRevealedData?.randomNumber,
+    resetTicket: resetRevealedTicket,
+  });
+  const { items, init, extraSettings, renderSubmitButton, onSpinEnd, content } = wheelStrategy;
+
+  const filteredItems = useMemo(() => {
+    const filtered = getTotalSize(itemsFromProps)
+      ? itemsFromProps.filter(({ amount }) => amount && amount > 0)
+      : itemsFromProps.map((item) => ({ ...item, amount: 1 }));
+
+    return filtered.sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name));
+  }, [itemsFromProps]);
+
+  useSyncEffect(() => {
+    init?.(filteredItems);
+  }, [init, filteredItems]);
 
   const getSeed = useCallback(async () => {
     const totalSize = getTotalSize(filteredItems);
@@ -371,28 +386,6 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
     onWheelItemsChanged?.(splittedItems);
   }, [splittedItems, onWheelItemsChanged]);
 
-  const visibleRevealedData: RevealedData | null = randomOrgTicketQuery.data
-    ? {
-        ticketId: randomOrgTicketQuery.data.result.ticketId,
-        createdAt: randomOrgTicketQuery.data.result.creationTime,
-        revealedAt: randomOrgTicketQuery.data.result.usedTime,
-        randomNumber: shouldRevealNumber ? randomOrgTicketQuery.data.result.random.data[0] : null,
-      }
-    : null;
-
-  const drawNewTicket = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    resetRevealedTicket();
-  };
-
-  const renderSubmitButton2 = visibleRevealedData?.randomNumber
-    ? () => (
-        <Button variant='contained' onClick={drawNewTicket}>
-          {t('wheel.ticket.drawNewTicket')}
-        </Button>
-      )
-    : renderSubmitButton;
-
   return (
     <WheelContextProvider controller={wheelController} changeInitialItems={setItemsFromProps}>
       <form className='wheel-content' onSubmit={handleSubmit(onSpinClick)}>
@@ -422,7 +415,7 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
               direction={content ? 'row' : 'column'}
               isLoadingSeed={isLoadingSeed || signedWinnerMutation.isPending}
               controls={elements}
-              renderSubmitButton={renderSubmitButton2}
+              renderSubmitButton={renderSubmitButton}
               ticketData={visibleRevealedData}
               availableQuota={availableQuota}
               isCreatingTicket={isCreating}

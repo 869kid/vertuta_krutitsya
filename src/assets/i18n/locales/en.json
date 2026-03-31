@@ -716,7 +716,8 @@
           "title": "Reset the wheel?",
           "description": "This action will return all participants back to the wheel."
         }
-      }
+      },
+      "newVariantFairnessInfo": "Only the final winner is selected proportionally to its contribution to the auction. All eliminated participants are selected afterwards just to create suspense."
     },
     "duel": {
       "helpNotification": {
@@ -990,6 +991,7 @@
     "revealed": {
       "title": "Revealed Ticket Details",
       "verificationSection": "Verification",
+      "verificationSectionCollapsedHint": "Expand this section to see verification details.",
       "checkInstruction": "Link to verification instructions",
       "warning": "If you checked the ticket/streamer and found a discrepancy, please do not immediately accuse anyone of cheating. Write to me in Telegram and I will review it all giving you an official answer with an explanation for a specific case.",
       "loading": "Loading ticket information...",
@@ -1022,6 +1024,16 @@
     },
     "verification": {
       "title": "Ticket Verification Instructions",
+      "tableOfContentsLabel": "On this page",
+      "toc": {
+        "page": "Introduction",
+        "flow": "How it works",
+        "analogy": "Real-world analogy",
+        "steps": "How to verify",
+        "recordStructure": "Record structure",
+        "resources": "Links",
+        "tbd": "Planned additions"
+      },
       "introduction": "This page explains how the signed random number generation system works and how anyone can independently verify that the winner selection was fair and unbiased.",
       "prerequisites": {
         "title": "Prerequisites Required for Ticket Validation",

@@ -1,4 +1,4 @@
-import { Key, RefObject, useCallback, useMemo, useRef, useState } from 'react';
+import { Key, ReactNode, RefObject, useCallback, useMemo, useRef, useState } from 'react';
 
 import { WheelItem } from '@models/wheel.model';
 import { getSlotFromSeed } from '@services/PredictionService.ts';
@@ -7,10 +7,15 @@ import useInitWrapper from '@domains/winner-selection/wheel-of-random/lib/strate
 
 import { WheelController } from '../../BaseWheel/BaseWheel';
 import ResetButton from '../ui/ResetButton';
+import { WheelResolverProps } from '../../lib/strategy/types';
 
 import useDropoutSpinEnd from './useDropoutSpinEnd';
 
-const useSimulationDropout = (controller: RefObject<WheelController | null>): Wheel.FormatHook => {
+const useSimulationDropout = ({
+  controller,
+  isTicketRevealed,
+  resetTicket,
+}: Pick<WheelResolverProps, 'controller' | 'isTicketRevealed' | 'resetTicket'>): Wheel.FormatHook => {
   const [_items, setItems] = useState<WheelItem[] | undefined>();
   const items = useMemo(() => _items || [], [_items]);
   const dropoutQueueRef = useRef<Key[]>([]);
@@ -74,11 +79,26 @@ const useSimulationDropout = (controller: RefObject<WheelController | null>): Wh
     controller.current?.resetPosition();
   }, [controller, initInternal, initialItems]);
 
+  const renderSubmitButton = (defaultButton: ReactNode): ReactNode => {
+    if (items.length > 1) {
+      return defaultButton;
+    }
+
+    const onClick = () => {
+      if (isTicketRevealed) {
+        resetTicket();
+      }
+      onReset();
+    };
+
+    return <ResetButton onClick={onClick} />;
+  };
+
   return {
     items: invertedItems,
     init,
     getNextWinnerId,
-    renderSubmitButton: (submitButton) => (items.length > 1 ? submitButton : <ResetButton onClick={onReset} />),
+    renderSubmitButton,
     onSpinEnd,
   };
 };

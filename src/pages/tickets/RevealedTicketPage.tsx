@@ -1,6 +1,21 @@
 import { CodeHighlight } from '@mantine/code-highlight';
-import { Alert, Box, Button, Card, Container, Group, Loader, Paper, Stack, Table, Text, Title } from '@mantine/core';
-import { IconAlertCircle, IconExternalLink } from '@tabler/icons-react';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  Collapse,
+  Container,
+  Group,
+  Loader,
+  Paper,
+  Stack,
+  Table,
+  Text,
+  Title,
+} from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconAlertCircle, IconChevronDown, IconChevronRight, IconExternalLink } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useMemo } from 'react';
@@ -33,6 +48,7 @@ interface RandomOrgTicketResponse {
 const RevealedTicketPage = () => {
   const { t } = useTranslation();
   const { ticketId } = useParams<{ ticketId: string }>();
+  const [isVerificationOpened, { toggle: toggleVerification }] = useDisclosure(false);
 
   const {
     data: record,
@@ -102,7 +118,7 @@ const RevealedTicketPage = () => {
 
   return (
     <PageContainer>
-      <Container size='md' py='xl'>
+      <Container size='md' pb='xl' w='100%'>
         <Stack gap='lg' pb='md'>
           <Group justify='space-between' align='center'>
             <Title order={1}>{t('tickets.revealed.title')}</Title>
@@ -111,12 +127,12 @@ const RevealedTicketPage = () => {
             {t('tickets.revealed.checkInstruction')}
           </Button>
 
-          <Alert color='orange' icon={<IconAlertCircle size={20} />} variant='light'>
+          {/* <Alert color='orange' icon={<IconAlertCircle size={20} />} variant='light'>
             {t('tickets.revealed.warning')}
-          </Alert>
+          </Alert> */}
 
           <Card shadow='sm' padding='lg' radius='md' withBorder>
-            <Stack gap='md'>
+            <Stack gap='sm'>
               <div>
                 <Text size='sm' c='dimmed' mb={4}>
                   {t('tickets.revealed.ticketId')}
@@ -143,54 +159,79 @@ const RevealedTicketPage = () => {
             </Stack>
           </Card>
 
-          <Card shadow='sm' padding='lg' radius='md' withBorder>
-            <Stack gap='md'>
-              <Group justify='space-between' align='center'>
-                <Title order={3}>{t('tickets.revealed.verificationSection')}</Title>
-                <Button
-                  component='a'
-                  href='https://api.random.org/signatures/form'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  variant='light'
-                  size='sm'
-                  rightSection={<IconExternalLink size={16} />}
-                >
-                  {t('tickets.revealed.verifySignature')}
-                </Button>
-              </Group>
+          <Card
+            shadow='sm'
+            padding='lg'
+            radius='md'
+            withBorder
+            onClick={toggleVerification}
+            style={{ cursor: 'pointer' }}
+            aria-expanded={isVerificationOpened}
+          >
+            <Stack gap='sm'>
+              <Stack gap='0'>
+                <Group justify='space-between' align='center' wrap='nowrap'>
+                  <Group gap='xs' align='center' wrap='nowrap' flex={1} miw={0} style={{ userSelect: 'none' }}>
+                    {isVerificationOpened ? <IconChevronDown size={20} /> : <IconChevronRight size={20} />}
+                    <Title order={3}>{t('tickets.revealed.verificationSection')}</Title>
+                  </Group>
+                  <Button
+                    component='a'
+                    href='https://api.random.org/signatures/form'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    variant='light'
+                    size='sm'
+                    rightSection={<IconExternalLink size={16} />}
+                    style={{ flexShrink: 0 }}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {t('tickets.revealed.verifySignature')}
+                  </Button>
+                </Group>
 
-              <Title order={4} mt='md'>
-                {t('tickets.revealed.randomData')}
-              </Title>
-              <CodeHighlight
-                code={JSON.stringify(randomOrgData.result.random ?? {}, null, 2)}
-                language='json'
-                withCopyButton
-                copyLabel={t('common.copy')}
-                copiedLabel={t('common.copied')}
-                style={{ maxHeight: '200px', overflow: 'auto' }}
-              />
-              <Text size='sm' c='dimmed'>
-                {t('tickets.revealed.randomDataDescription')}
-              </Text>
+                <Text size='sm' c='dimmed'>
+                  {t('tickets.revealed.verificationSectionCollapsedHint')}
+                </Text>
+              </Stack>
 
-              <Title order={4}>{t('tickets.revealed.signature')}</Title>
-              <CodeHighlight
-                code={record.signature ?? ''}
-                language='text'
-                withCopyButton
-                copyLabel={t('common.copy')}
-                copiedLabel={t('common.copied')}
-              />
-              <Text size='sm' c='dimmed'>
-                {t('tickets.revealed.signatureDescription')}
-              </Text>
+              <Collapse in={isVerificationOpened} keepMounted>
+                <Box onClick={(event) => event.stopPropagation()} style={{ cursor: 'default' }}>
+                  <Stack gap='sm'>
+                    <Title order={4} mt='xs'>
+                      {t('tickets.revealed.randomData')}
+                    </Title>
+                    <CodeHighlight
+                      code={JSON.stringify(randomOrgData.result.random ?? {}, null, 2)}
+                      language='json'
+                      withCopyButton
+                      copyLabel={t('common.copy')}
+                      copiedLabel={t('common.copied')}
+                      style={{ maxHeight: '150px', overflow: 'auto' }}
+                    />
+                    <Text size='sm' c='dimmed'>
+                      {t('tickets.revealed.randomDataDescription')}
+                    </Text>
+
+                    <Title order={4}>{t('tickets.revealed.signature')}</Title>
+                    <CodeHighlight
+                      code={record.signature ?? ''}
+                      language='text'
+                      withCopyButton
+                      copyLabel={t('common.copy')}
+                      copiedLabel={t('common.copied')}
+                    />
+                    <Text size='sm' c='dimmed'>
+                      {t('tickets.revealed.signatureDescription')}
+                    </Text>
+                  </Stack>
+                </Box>
+              </Collapse>
             </Stack>
           </Card>
 
           <Card shadow='sm' padding='lg' radius='md' withBorder>
-            <Stack gap='md'>
+            <Stack gap='sm'>
               <Title order={3}>{t('tickets.revealed.randomNumber')}</Title>
               <Paper bg='dark.8' p='md' radius='md' shadow='none'>
                 <Text size='xl' fw={700} ta='center' ff='monospace'>
@@ -204,7 +245,7 @@ const RevealedTicketPage = () => {
           </Card>
 
           <Card shadow='sm' padding='lg' radius='md' withBorder>
-            <Stack gap='md'>
+            <Stack gap='sm'>
               <Title order={3}>{t('tickets.revealed.winner')}</Title>
               <Group>
                 <Text size='lg' fw={600}>
@@ -245,7 +286,7 @@ const RevealedTicketPage = () => {
           </Card>
 
           <Card shadow='sm' padding='lg' radius='md' withBorder>
-            <Stack gap='md'>
+            <Stack gap='sm'>
               <Title order={3}>{t('tickets.revealed.participants')}</Title>
               <Table striped highlightOnHover>
                 <Table.Thead>
