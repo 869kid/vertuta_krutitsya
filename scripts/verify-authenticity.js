@@ -145,12 +145,31 @@ function calculateHash(data) {
 }
 
 /**
+ * Removes Cloudflare script that injects window.__CF$cv$params
+ * Example: <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e56b4448fb7504b',t:'MTc3NTAzNzE3OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+ */
+function removeCloudflareScript(html) {
+  const marker = 'window.__CF$cv$params';
+
+  let index = html.indexOf(marker);
+  if (index === -1) return html;
+
+  // Find the opening <script before it
+  const start = html.lastIndexOf('<script', index);
+  if (start === -1) return html;
+
+  // Find the closing </script> after it
+  const end = html.indexOf('</script>', index);
+  if (end === -1) return html;
+
+  return html.slice(0, start) + html.slice(end + 9);
+}
+
+/**
  * Strips Cloudflare beacon injections from HTML content
  * Only removes script tags with src="https://static.cloudflareinsights.com/beacon.min.js/..."
  */
-function stripCloudflareInjections(htmlContent) {
-  const html = htmlContent.toString('utf-8');
-
+function removeCloudflareBeacon(html) {
   // Pattern to match only Cloudflare beacon.min.js scripts
   const cloudflareBeaconPattern =
     /[^\S\r\n]*<script\s+[^>]*\bsrc=["']https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js\/[^"']*["'][^>]*><\/script>\n<\/body>/gi;
@@ -158,15 +177,22 @@ function stripCloudflareInjections(htmlContent) {
   const matches = html.match(cloudflareBeaconPattern) || [];
   let strippedHtml = html;
 
-  // Remove each matched Cloudflare beacon script
   for (const match of matches) {
     strippedHtml = strippedHtml.replace(match, '  </body>');
   }
 
+  return strippedHtml;
+}
+
+function stripCloudflareInjections(htmlContent) {
+  const html = htmlContent.toString('utf-8');
+
+  const strippedHtml = removeCloudflareBeacon(removeCloudflareScript(html));
+
   return {
     content: Buffer.from(strippedHtml, 'utf-8'),
-    stripped: matches.length > 0,
-    count: matches.length,
+    stripped: true,
+    count: 1,
   };
 }
 
