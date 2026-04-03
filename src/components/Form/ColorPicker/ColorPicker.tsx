@@ -1,6 +1,7 @@
-import { FC, MouseEvent, useCallback, useState } from 'react';
 import { Button, Popover } from '@mantine/core';
+import { useThrottledCallback } from '@tanstack/react-pacer';
 import SketchPicker, { SketchProps } from '@uiw/react-color-sketch';
+import { FC, useCallback } from 'react';
 
 interface ColorPickerProps {
   value: string;
@@ -12,9 +13,12 @@ const ColorPicker: FC<ColorPickerProps> = ({ value, onChange, onBlur }) => {
   const handleColorChange = useCallback<Required<SketchProps>['onChange']>(
     ({ hex }) => {
       onChange(hex);
+      onBlur?.();
     },
-    [onChange],
+    [onChange, onBlur],
   );
+
+  const colorChangeThrottled = useThrottledCallback(handleColorChange, { wait: 250, trailing: true, leading: true });
 
   return (
     <>
@@ -32,7 +36,7 @@ const ColorPicker: FC<ColorPickerProps> = ({ value, onChange, onBlur }) => {
           />
         </Popover.Target>
         <Popover.Dropdown p={0} bd='none' bg='transparent'>
-          <SketchPicker color={value} onChange={handleColorChange} disableAlpha />
+          <SketchPicker color={value} onChange={colorChangeThrottled} disableAlpha />
         </Popover.Dropdown>
       </Popover>
     </>
