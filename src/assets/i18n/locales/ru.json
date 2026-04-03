@@ -206,6 +206,15 @@
       },
       "ticketVerification": {
         "title": "Проверка колеса"
+      },
+      "github": {
+        "title": "GitHub"
+      },
+      "telegram": {
+        "title": "Telegram"
+      },
+      "support": {
+        "title": "Поддержка"
       }
     }
   },

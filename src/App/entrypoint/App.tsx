@@ -11,20 +11,20 @@ import { io } from 'socket.io-client';
 import classes from '@App/entrypoint/App.module.css';
 import { AppHeader } from '@App/entrypoint/AppHeader';
 import { AppMain } from '@App/entrypoint/AppMain';
-import { AppNavbar } from '@App/entrypoint/AppNavbar';
+import { AppNavbar } from '@App/entrypoint/navbar/AppNavbar.tsx';
 import { PortalContextProvider } from '@App/storage/portalContext';
 import { COLORS } from '@constants/color.constants';
 import AutoloadAutosave from '@domains/auction/archive/ui/AutoloadAutosave';
 import { integrations } from '@domains/bids/external-integrations/integrations.ts';
 import { globalBidsEventBus } from '@domains/bids/lib/globalBidsEventBus.ts';
 import { TutorialManager } from '@domains/tutorials';
+import { MenuItem } from '@models/common.model';
 import { RootState } from '@reducers';
 import { processRedemption, Purchase } from '@reducers/Purchases/Purchases.ts';
 import { useIsMobile } from '@shared/lib/ui';
 import { getSocketIOUrl } from '@utils/url.utils.ts';
 
 import { getIntegrationsValidity } from '../../api/userApi';
-import { useActiveMenu, useMenuItems } from '../../constants/menuItems.constants';
 import ROUTES from '../../constants/routes.constants';
 import { connectToBroadcastingSocket } from '../../domains/broadcasting/lib/socket';
 import { useLotsBroadcasting } from '../../domains/broadcasting/lib/useLotsBroadcasting';
@@ -48,8 +48,7 @@ const App: React.FC = () => {
     () => isBrowser && window.location.hostname === 'test.pointauc.com',
   );
   const { username } = useSelector((root: RootState) => root.user);
-  const menuItems = useMenuItems();
-  const activeMenu = useActiveMenu(menuItems);
+  const [activeMenu, setActiveMenu] = useState<MenuItem | undefined>();
   const isColorResetDone = useRef(localStorage.getItem('isColorResetDone') === 'true');
 
   const [isNavbarOpened, mobileNavbar] = useDisclosure();
@@ -135,10 +134,6 @@ const App: React.FC = () => {
     };
   }, [username]);
 
-  // const userQuery = useQuery({
-  //   ...userControllerGetUserOptions({}),
-  // });
-
   useEffect(() => {
     const loadUser = async () => {
       await loadUserData(dispatch);
@@ -159,18 +154,14 @@ const App: React.FC = () => {
     <PortalContextProvider>
       <AppShell
         padding={0}
-        className={clsx(classes.app, {
-          [classes.expanded]: isNavbarExpanded,
-          [classes.fixedOpened]: activeMenu?.navbarFixedState === 'opened',
-        })}
+        className='bg-paper-800'
         header={{ height: { base: 50, sm: 0 } }}
-        navbar={{ width: 61, breakpoint: 'sm', collapsed: { mobile: !isNavbarOpened } }}
+        navbar={{ width: 70, breakpoint: 'sm', collapsed: { mobile: !isNavbarOpened } }}
         transitionDuration={isMobile ? 200 : 0}
       >
         <AppHeader isNavbarOpened={isNavbarOpened} toggleNavbar={mobileNavbar.toggle} activeMenu={activeMenu} t={t} />
         <AppNavbar
-          menuItems={menuItems}
-          activeMenu={activeMenu}
+          onActiveMenuChange={setActiveMenu}
           isMobile={isMobile}
           closeNavbar={mobileNavbar.close}
           isNavbarExpanded={isNavbarExpanded}

@@ -356,6 +356,15 @@
       },
       "ticketVerification": {
         "title": "Ticket Verification"
+      },
+      "github": {
+        "title": "GitHub"
+      },
+      "telegram": {
+        "title": "Telegram"
+      },
+      "support": {
+        "title": "Support"
       }
     }
   },

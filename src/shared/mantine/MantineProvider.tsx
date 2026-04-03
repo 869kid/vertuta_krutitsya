@@ -4,6 +4,7 @@ import {
   MantineColorsTuple,
   alpha,
   createTheme,
+  darken,
   MantineTheme,
   rem,
   VariantColorsResolver,
@@ -30,6 +31,12 @@ import CloseButtonExtended from './ui/CloseButton';
 const shadowOpacityMain = 0.12;
 const shadowOpacitySecondary = 0.09;
 const shadowOpacityXs = 0.2;
+
+const baseDarkPalette = DEFAULT_THEME.colors.dark;
+const darkPaletteOneStepDarker = [
+  ...baseDarkPalette.slice(1),
+  darken(baseDarkPalette[9], 0.35),
+] as unknown as MantineColorsTuple;
 
 const cssResolver: CSSVariablesResolver = (theme) => ({
   variables: {},

@@ -25,7 +25,7 @@ Code Style and Structure:
 
 Library and tools usage:
 
-- Use tailwindcss for styling components.
+- Always prefer using Tailwind CSS for styling components.
 - Use mantine library for basic UI components.
 
 Specific Naming Patterns:

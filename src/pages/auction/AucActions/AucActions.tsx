@@ -130,32 +130,7 @@ const AucActions: React.FC = () => {
     <Group className={classes.wrapper} justify='center'>
       <Group gap='lg'>
         <Button.Group>
-          <Tooltip label='GitHub'>
-            <Button
-              size='sm'
-              component='a'
-              target='_blank'
-              rel='noopener noreferrer'
-              href='https://github.com/Pointauc/pointauc_frontend'
-              variant='outline'
-              color='primary.3'
-            >
-              <GitHubIcon />
-            </Button>
-          </Tooltip>
-          <Tooltip label={t('auc.supportCreator')}>
-            <Button
-              size='sm'
-              component='a'
-              target='_blank'
-              rel='noopener noreferrer'
-              href='https://www.donationalerts.com/r/kozjar'
-              variant='outline'
-              color='primary.3'
-            >
-              <AttachMoneyIcon />
-            </Button>
-          </Tooltip>
+          <DeleteAllLots />
         </Button.Group>
 
         <Button.Group>
@@ -171,20 +146,6 @@ const AucActions: React.FC = () => {
               <IconDeviceFloppy size={20} />
             </Button>
           </Tooltip>
-          <Tooltip label={t('auc.sendBugReport')}>
-            <Button
-              component='a'
-              target='_blank'
-              rel='noopener noreferrer'
-              href='https://docs.google.com/forms/d/e/1FAIpQLSe9b82ColWOLyomlrqCGXXjFBWhwL7opZycPYz5v1ovwVdbjA/viewform?usp=sf_link'
-              size='sm'
-              variant='outline'
-              color='primary.3'
-            >
-              <PestControlIcon />
-            </Button>
-          </Tooltip>
-          <DeleteAllLots />
         </Button.Group>
 
         <CheckboxButtonGroup options={availableOptions} onChangeActive={selectOptions} activeKeys={selectedOptions} />
