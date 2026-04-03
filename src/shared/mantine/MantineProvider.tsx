@@ -46,12 +46,7 @@ const darkPaletteBase = [
   '#161616',
 ] as const;
 
-const lighterDark = (palette: readonly string[]): MantineColorsTuple =>
-  palette.map((color, index) => lighten(color, (palette.length - 1 - index) * 0.01)) as unknown as MantineColorsTuple;
-
 const darkPalette = darkPaletteBase;
-
-console.log(lighterDark(darkPalette).map((color) => tinycolor(color).toHexString()));
 
 const cssResolver: CSSVariablesResolver = (theme) => ({
   variables: {},

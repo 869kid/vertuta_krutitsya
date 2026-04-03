@@ -64,12 +64,12 @@
 
 :global(.custom-background) {
   .root {
-    background-color: var(--mantine-color-darkTransparent-7);
+    background-color: var(--mantine-color-darkTransparent-8);
     box-shadow: none;
   }
 
   .even {
-    background-color: var(--mantine-color-darkTransparent-6);
+    background-color: var(--mantine-color-darkTransparent-7);
   }
 }
 

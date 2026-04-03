@@ -35,6 +35,18 @@
   --color-paper-800: var(--mantine-color-dark-8);
   --color-paper-900: var(--mantine-color-dark-9);
   --color-paper-950: var(--mantine-color-dark-9);
+
+  --color-paper-transparent-50: var(--mantine-color-darkTransparent-0);
+  --color-paper-transparent-100: var(--mantine-color-darkTransparent-1);
+  --color-paper-transparent-200: var(--mantine-color-darkTransparent-2);
+  --color-paper-transparent-300: var(--mantine-color-darkTransparent-3);
+  --color-paper-transparent-400: var(--mantine-color-darkTransparent-4);
+  --color-paper-transparent-500: var(--mantine-color-darkTransparent-5);
+  --color-paper-transparent-600: var(--mantine-color-darkTransparent-6);
+  --color-paper-transparent-700: var(--mantine-color-darkTransparent-7);
+  --color-paper-transparent-800: var(--mantine-color-darkTransparent-8);
+  --color-paper-transparent-900: var(--mantine-color-darkTransparent-9);
+  --color-paper-transparent-950: var(--mantine-color-darkTransparent-9);
 }
 
 @layer base {

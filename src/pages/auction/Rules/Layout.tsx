@@ -144,7 +144,7 @@ const RulesLayout = ({ onRemoveRule, onAddRule, onUpdateRule, rules }: RulesLayo
           />
         </div>
       )}
-      <div className={classes.editorWrapper} style={{ backgroundColor: background.color }}>
+      <div className={`${classes.editorWrapper} rounded-md`} style={{ backgroundColor: background.color }}>
         <RichTextEditorComponent
           content={initialContent}
           onChange={onRulesChanged}
