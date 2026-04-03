@@ -4,7 +4,8 @@ import {
   MantineColorsTuple,
   alpha,
   createTheme,
-  darken,
+  DEFAULT_THEME,
+  lighten,
   MantineTheme,
   rem,
   VariantColorsResolver,
@@ -14,8 +15,8 @@ import { CodeHighlightAdapterProvider, plainTextAdapter } from '@mantine/code-hi
 import { ModalsProvider } from '@mantine/modals';
 import { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { DEFAULT_THEME } from '@mantine/core';
 import { generateColors } from '@mantine/colors-generator';
+import tinycolor from 'tinycolor2';
 
 import { calcUiElementsOpacity } from '@utils/ui/background';
 import { RootState } from '@reducers';
@@ -32,11 +33,25 @@ const shadowOpacityMain = 0.12;
 const shadowOpacitySecondary = 0.09;
 const shadowOpacityXs = 0.2;
 
-const baseDarkPalette = DEFAULT_THEME.colors.dark;
-const darkPaletteOneStepDarker = [
-  ...baseDarkPalette.slice(1),
-  darken(baseDarkPalette[9], 0.35),
-] as unknown as MantineColorsTuple;
+const darkPaletteBase = [
+  '#959595',
+  '#868686',
+  '#727272',
+  '#606060',
+  '#3e3e3e',
+  '#363636',
+  '#2e2e2e',
+  '#272727',
+  '#1e1e1e',
+  '#161616',
+] as const;
+
+const lighterDark = (palette: readonly string[]): MantineColorsTuple =>
+  palette.map((color, index) => lighten(color, (palette.length - 1 - index) * 0.01)) as unknown as MantineColorsTuple;
+
+const darkPalette = darkPaletteBase;
+
+console.log(lighterDark(darkPalette).map((color) => tinycolor(color).toHexString()));
 
 const cssResolver: CSSVariablesResolver = (theme) => ({
   variables: {},
@@ -89,9 +104,8 @@ const MantineProvider = ({ children }: { children: React.ReactNode }) => {
       },
       fontFamily: 'Inter, sans-serif',
       colors: {
-        darkTransparent: DEFAULT_THEME.colors.dark.map((color) =>
-          alpha(color, uiOpacity),
-        ) as unknown as MantineColorsTuple,
+        dark: darkPalette,
+        darkTransparent: darkPalette.map((color) => alpha(color, uiOpacity)) as unknown as MantineColorsTuple,
         primary: generateColors(adjustedPrimary),
       },
       components: {

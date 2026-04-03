@@ -196,7 +196,7 @@
         "title": "Заказы зрителей"
       },
       "wheel": {
-        "title": "Колесо рандома"
+        "title": "Колесо удачи"
       },
       "overlays": {
         "title": "Виджеты"
@@ -205,16 +205,16 @@
         "title": "Выйти с Аккаунта"
       },
       "ticketVerification": {
-        "title": "Проверка колеса"
+        "title": "Проверка победителя"
       },
       "github": {
         "title": "GitHub"
       },
       "telegram": {
-        "title": "Telegram"
+        "title": "Telegram для связи"
       },
       "support": {
-        "title": "Поддержка"
+        "title": "Поддержка сайта"
       }
     }
   },

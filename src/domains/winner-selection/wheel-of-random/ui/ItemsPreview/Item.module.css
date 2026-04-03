@@ -2,7 +2,7 @@
   cursor: pointer;
   border-radius: 8px;
   padding: 8px 8px 8px 16px;
-  background-color: var(--wheel-item-grey10, #424242);
+  background-color: var(--mantine-color-dark-5);
   gap: 14px;
   color: white;
   position: relative;
@@ -17,11 +17,11 @@
 }
 
 .item:nth-of-type(2n) {
-  background-color: var(--wheel-item-grey9, #505050);
+  background-color: var(--mantine-color-dark-4);
 }
 
 .disabled {
-  background-color: var(--wheel-item-grey12, #303030);
+  background-color: var(--mantine-color-dark-6);
   color: #808080;
   text-decoration: line-through;
 }

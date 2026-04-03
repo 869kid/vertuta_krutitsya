@@ -62,7 +62,7 @@ export const AppNavbarItem = ({ menuItem, isActive, isNextActive, onMouseDown, o
   );
 
   return (
-    <Tooltip label={t(title)} position='right' withArrow>
+    <Tooltip label={t(title)} px='sm' py='xs' fw={600} fz='md' position='right' withArrow arrowSize={7}>
       {navLink}
     </Tooltip>
   );
