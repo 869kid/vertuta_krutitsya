@@ -130,10 +130,6 @@ const AucActions: React.FC = () => {
     <Group className={classes.wrapper} justify='center'>
       <Group gap='lg'>
         <Button.Group>
-          <DeleteAllLots />
-        </Button.Group>
-
-        <Button.Group>
           {marblesAuc && (
             <Tooltip label={t('auc.downloadMarbles')}>
               <Button onClick={downloadMarbles} size='sm' variant='outline' color='primary.3'>
@@ -150,6 +146,10 @@ const AucActions: React.FC = () => {
 
         <CheckboxButtonGroup options={availableOptions} onChangeActive={selectOptions} activeKeys={selectedOptions} />
       </Group>
+
+      <Button.Group>
+        <DeleteAllLots />
+      </Button.Group>
 
       <ArchiveModal opened={archiveModalOpen} onClose={handleArchiveClose} />
 
