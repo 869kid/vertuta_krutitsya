@@ -13,6 +13,8 @@ import { slotsToArchivedLots } from '@domains/auction/archive/lib/converters';
 
 import type { RootState } from '@reducers/index.ts';
 
+const MATRYOSHKA_STORAGE_KEY = 'matryoshka-state';
+
 const SORTABLE_SLOT_EVENTS = [
   'slots/setSlotData',
   'slots/setSlotAmount',
@@ -40,7 +42,6 @@ const sortSlotsMiddleware: Middleware<{}, RootState> =
     return result;
   };
 
-// Lazily computed to avoid circular-dep temporal dead zone in SSR bundles.
 let _slotsUpdateEvents: string[] | null = null;
 const getSlotsUpdateEvents = () => {
   if (!_slotsUpdateEvents) {
@@ -55,8 +56,7 @@ const saveSlotsWithCooldown = throttle(
     const lots = slotsToArchivedLots(slots);
     archiveApi
       .upsertAutosave({ lots })
-      .then(() => console.log('Autosave updated', lots))
-      .catch((err) => console.error('Autosave failed:', err));
+      .catch((err: unknown) => console.error('Autosave failed:', err));
   },
   { wait: 2000, trailing: true, leading: false },
 );
@@ -73,27 +73,62 @@ const saveSlotsMiddleware: Middleware<{}, RootState> =
     return result;
   };
 
-/**
- * The singleton Redux store.
- * Starts as `null`; initialized by `initStore()` called from main.tsx.
- * Integration files import this via `@store` and access it only inside
- * function callbacks — live ES module binding ensures they see the real
- * store once it is set, even across circular imports.
- */
+const MATRYOSHKA_PERSIST_EVENTS = [
+  'matryoshka/recordWin',
+  'matryoshka/nextRound',
+  'matryoshka/clearHistory',
+  'matryoshka/loadHistory',
+  'matryoshka/loadRound',
+];
+
+const saveMatryoshkaWithCooldown = throttle(
+  (matryoshkaState: RootState['matryoshka']) => {
+    if (!isBrowser) return;
+    try {
+      localStorage.setItem(
+        MATRYOSHKA_STORAGE_KEY,
+        JSON.stringify({
+          history: matryoshkaState.history,
+          currentRound: matryoshkaState.currentRound,
+        }),
+      );
+    } catch (err) {
+      console.error('Matryoshka save failed:', err);
+    }
+  },
+  { wait: 1000, trailing: true, leading: false },
+);
+
+const matryoshkaPersistMiddleware: Middleware<{}, RootState> =
+  (storeApi) =>
+  (next) =>
+  (action): AnyAction => {
+    const result = next(action);
+    if (MATRYOSHKA_PERSIST_EVENTS.includes(action.type)) {
+      saveMatryoshkaWithCooldown(storeApi.getState().matryoshka);
+    }
+    return result;
+  };
+
+export function loadMatryoshkaState(): { history: any[]; currentRound: number } | null {
+  if (!isBrowser) return null;
+  try {
+    const raw = localStorage.getItem(MATRYOSHKA_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // corrupted data
+  }
+  return null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let store: any = null;
 
-/**
- * Creates and sets the application store. Must be called once at startup
- * (from main.tsx) before any integration callbacks execute.
- * Accepts rootReducer as a parameter to avoid importing it at module scope,
- * which would trigger a circular-dependency TDZ in Rollup SSR bundles.
- */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function initStore(rootReducer: Reducer<any>) {
   store = configureStore({
     reducer: rootReducer,
-    middleware: [thunk, sortSlotsMiddleware, saveSlotsMiddleware],
+    middleware: [thunk, sortSlotsMiddleware, saveSlotsMiddleware, matryoshkaPersistMiddleware],
   });
   return store;
 }

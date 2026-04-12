@@ -3,7 +3,11 @@ import { IconClock, IconCopy } from '@tabler/icons-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { notifications } from '@mantine/notifications';
 
-import TextWithHint from '@domains/user-settings/ui/TextWithHint';
+import { Tooltip, Text as MantineText, TextProps as MantineTextProps } from '@mantine/core';
+
+const TextWithHint = ({ hint, textProps, children }: { hint: string; textProps?: MantineTextProps; children: React.ReactNode }) => (
+  <Tooltip label={hint}><MantineText {...textProps}>{children}</MantineText></Tooltip>
+);
 
 import styles from './TicketCard.module.css';
 

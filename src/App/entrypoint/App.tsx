@@ -1,12 +1,8 @@
-import { Alert, Anchor, AppShell, Button, Group, Modal, Text } from '@mantine/core';
+import { AppShell } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconAlertTriangle, IconInfoCircle } from '@tabler/icons-react';
-import clsx from 'clsx';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
-import { io } from 'socket.io-client';
 
 import classes from '@App/entrypoint/App.module.css';
 import { AppHeader } from '@App/entrypoint/AppHeader';
@@ -15,20 +11,13 @@ import { AppNavbar } from '@App/entrypoint/navbar/AppNavbar.tsx';
 import { PortalContextProvider } from '@App/storage/portalContext';
 import { COLORS } from '@constants/color.constants';
 import AutoloadAutosave from '@domains/auction/archive/ui/AutoloadAutosave';
-import { integrations } from '@domains/bids/external-integrations/integrations.ts';
-import { globalBidsEventBus } from '@domains/bids/lib/globalBidsEventBus.ts';
-import { TutorialManager } from '@domains/tutorials';
 import { MenuItem } from '@models/common.model';
 import { RootState } from '@reducers';
-import { processRedemption, Purchase } from '@reducers/Purchases/Purchases.ts';
 import { useIsMobile } from '@shared/lib/ui';
-import { getSocketIOUrl } from '@utils/url.utils.ts';
 
-import { getIntegrationsValidity } from '../../api/userApi';
-import ROUTES from '../../constants/routes.constants';
-import { connectToBroadcastingSocket } from '../../domains/broadcasting/lib/socket';
-import { useLotsBroadcasting } from '../../domains/broadcasting/lib/useLotsBroadcasting';
 import { loadUserData, setAucSettings } from '../../reducers/AucSettings/AucSettings';
+import { loadHistory, loadRound } from '../../reducers/Matryoshka/Matryoshka';
+import { loadMatryoshkaState } from '../../store';
 import { getCookie } from '../../utils/common.utils';
 import { isBrowser } from '../../utils/ssr.ts';
 
@@ -38,15 +27,10 @@ const hasToken = isBrowser && !!getCookie('userSession');
 
 let openDriverTimeout: any;
 
-const productionUrl = 'https://pointauc.com/';
-
 const App: React.FC = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch<ThunkDispatch<any, any, any>>();
   const [isHovered, setIsDrawerOpen] = useState(false);
-  const [isTestEnvironmentModalOpened, setIsTestEnvironmentModalOpened] = useState(
-    () => isBrowser && window.location.hostname === 'test.pointauc.com',
-  );
   const { username } = useSelector((root: RootState) => root.user);
   const [activeMenu, setActiveMenu] = useState<MenuItem | undefined>();
   const isColorResetDone = useRef(localStorage.getItem('isColorResetDone') === 'true');
@@ -68,72 +52,6 @@ const App: React.FC = () => {
     setIsDrawerOpen(false);
   }, []);
 
-  useLotsBroadcasting();
-
-  useEffect(() => {
-    if (username) {
-      dispatch(connectToBroadcastingSocket);
-
-      // Connect to global socket
-      const globalSocket = io(`${getSocketIOUrl()}`, { query: { cookie: document.cookie }, transports: ['websocket'] });
-
-      globalSocket.on('Bid', (bid: Purchase) => {
-        globalBidsEventBus.emit('bid', { ...bid, source: 'API' });
-      });
-
-      return () => {
-        globalSocket.disconnect();
-      };
-    }
-  }, [dispatch, username]);
-
-  // Redirect all bids to the global event bus
-  useEffect(() => {
-    // Subscribe to all integration bid events and redirect to global bus
-    const unsubscribers = integrations.all.map((integration) => {
-      const callback = (bid: Purchase) => {
-        globalBidsEventBus.emit('bid', bid);
-      };
-      integration.pubsubFlow.events.on('bid', callback);
-      return () => {
-        integration.pubsubFlow.events.off('bid', callback);
-      };
-    });
-
-    return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
-    };
-  }, []);
-
-  // Handle new bids
-  useEffect(() => {
-    const handleBid = (bid: Purchase) => {
-      dispatch(processRedemption(bid));
-    };
-    globalBidsEventBus.on('bid', handleBid);
-    return () => {
-      globalBidsEventBus.off('bid', handleBid);
-    };
-  }, [dispatch]);
-
-  useEffect(() => {
-    let interval: any;
-    if (hasToken && username) {
-      interval = setInterval(
-        () => {
-          getIntegrationsValidity();
-        },
-        1000 * 60 * 60 * 3,
-      );
-    }
-
-    return (): void => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [username]);
-
   useEffect(() => {
     const loadUser = async () => {
       await loadUserData(dispatch);
@@ -142,7 +60,12 @@ const App: React.FC = () => {
     if (hasToken) {
       loadUser();
     }
-    // do not add t function to the deps
+
+    const saved = loadMatryoshkaState();
+    if (saved) {
+      if (saved.history?.length) dispatch(loadHistory(saved.history));
+      if (saved.currentRound > 1) dispatch(loadRound(saved.currentRound));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
@@ -171,39 +94,7 @@ const App: React.FC = () => {
         />
         <AppMain />
       </AppShell>
-      <TutorialManager />
       <AutoloadAutosave />
-      <Modal
-        opened={isTestEnvironmentModalOpened}
-        onClose={() => setIsTestEnvironmentModalOpened(false)}
-        withCloseButton={false}
-        closeOnClickOutside={false}
-        closeOnEscape={false}
-        title={t('testEnvironmentModal.title')}
-      >
-        <Alert icon={<IconAlertTriangle size={20} />} color='yellow' variant='light' mb='md'>
-          <Text size='sm'>{t('testEnvironmentModal.description')}</Text>
-          <Group gap='xxs' align='center' mt='xs'>
-            <Text size='sm' fw={600}>
-              {t('testEnvironmentModal.productionUrl')}
-            </Text>
-            <Anchor href={productionUrl} target='_blank' rel='noreferrer' size='sm' fw={600}>
-              {productionUrl}
-            </Anchor>
-          </Group>
-        </Alert>
-        <Alert icon={<IconInfoCircle size={20} />} color='blue' variant='light' mb='md'>
-          <Group gap='xxs' align='center'>
-            <Text size='sm'>{t('testEnvironmentModal.stateExport')}</Text>
-            <Anchor component={Link} to={ROUTES.SETTINGS} size='sm' fw={600}>
-              {t('testEnvironmentModal.settingsLink')}
-            </Anchor>
-          </Group>
-        </Alert>
-        <Button fullWidth onClick={() => setIsTestEnvironmentModalOpened(false)}>
-          {t('testEnvironmentModal.confirm')}
-        </Button>
-      </Modal>
     </PortalContextProvider>
   );
 };

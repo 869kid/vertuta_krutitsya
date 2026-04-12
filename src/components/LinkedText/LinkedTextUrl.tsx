@@ -5,8 +5,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
-import { addAlert } from '@reducers/notifications/notifications';
-import { AlertTypeEnum } from '@models/alert.model.ts';
+import { notifications } from '@mantine/notifications';
 import { ALLOWED_SAFE_DOMAINS } from '@constants/common.constants.ts';
 
 interface LinkedTextUrlProps {
@@ -36,20 +35,10 @@ const LinkedTextUrl = ({ href, content, copyable = false, linkProps = {} }: Link
     navigator.clipboard
       .writeText(href)
       .then(() => {
-        dispatch(
-          addAlert({
-            type: AlertTypeEnum.Info,
-            message: t('common.linkCopied'),
-          }),
-        );
+        notifications.show({ message: t('common.linkCopied'), color: 'blue' });
       })
       .catch(() => {
-        dispatch(
-          addAlert({
-            type: AlertTypeEnum.Error,
-            message: t('common.copyFailed'),
-          }),
-        );
+        notifications.show({ message: t('common.copyFailed'), color: 'red' });
       });
   };
 

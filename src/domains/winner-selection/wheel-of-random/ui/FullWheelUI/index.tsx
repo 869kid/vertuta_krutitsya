@@ -77,6 +77,7 @@ interface RandomWheelProps<TWheelItem extends WheelItem = WheelItem> {
   elements?: Partial<SettingElements>;
   children?: ReactNode;
   wheelRef?: React.RefObject<RandomWheelController | null>;
+  addButton?: ReactNode;
   // callbacks
   deleteItem?: (id: Key) => void;
   onWin?: (winner: TWheelItem) => void;
@@ -114,6 +115,7 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
   elements: elementsFromProps,
   children,
   wheelRef,
+  addButton,
 }: RandomWheelProps<TWheelItem>): ReactElement => {
   const [itemsFromProps, setItemsFromProps] = useState<WheelItem[]>(_itemsFromProps);
   const elements = useMemo(() => ({ ...initialAvailableSettings, ...elementsFromProps }), [elementsFromProps]);
@@ -392,7 +394,7 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
         {soundtrackEnabled && soundtrackSource != null && (
           <PlayerFactory source={soundtrackSource} ref={soundtrackPlayerRef} displayAs='hidden' />
         )}
-        {!content && elements.preview && <ItemsPreview allItems={filteredItems} activeItems={items} format={format} />}
+        {!content && elements.preview && <ItemsPreview allItems={filteredItems} activeItems={items} format={format} addButton={addButton} />}
         {content && <div className='wheel-content-negative-space' />}
         <WheelFlexboxAutosizer>
           {({ onOptimalSizeChange }) => (

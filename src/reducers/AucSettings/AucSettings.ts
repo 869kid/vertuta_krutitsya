@@ -9,12 +9,10 @@ import { COLORS } from '@constants/color.constants.ts';
 import { InsertStrategy } from '@enums/insertStrategy.enum';
 import { aukus } from '@components/Event/events.ts';
 import { BidNameStrategy } from '@enums/bid.enum';
-import { getDonateXAuthData } from '@domains/bids/external-integrations/DonateX/auth.ts';
 import { isBrowser } from '@utils/ssr.ts';
 
 import { setUserState } from '../User/User';
 import { RootState } from '../index';
-import { validateIntegrations } from '../Subscription/Subscription';
 
 export interface ViewSettings {
   compact: boolean;
@@ -154,7 +152,6 @@ export const loadUserData = async (dispatch: ThunkDispatch<RootState, {}, Action
     userId,
     donateHelperAuth,
   } = user;
-  const donatexAuth = getDonateXAuthData();
 
   if (activeSettings) {
     const { startTime, timeStep, ...settings } = activeSettings;
@@ -168,7 +165,7 @@ export const loadUserData = async (dispatch: ThunkDispatch<RootState, {}, Action
   }
   dispatch(
     setUserState({
-      username: twitchAuth?.username ?? daAuth?.username ?? donatePayAuth?.username ?? donatexAuth?.username ?? 'Empty',
+      username: twitchAuth?.username ?? daAuth?.username ?? donatePayAuth?.username ?? 'Empty',
       userId: twitchAuth?.id,
       pointaucUserId: userId,
       activeSettingsPresetId,
@@ -179,7 +176,6 @@ export const loadUserData = async (dispatch: ThunkDispatch<RootState, {}, Action
         twitch: twitchAuth,
         tourniquet: tourniquetAuth,
         ihaq: ihaqAuth,
-        donatex: donatexAuth,
         donateHelper: donateHelperAuth,
       },
     }),
@@ -189,12 +185,6 @@ export const loadUserData = async (dispatch: ThunkDispatch<RootState, {}, Action
     dispatch(saveSettings({ primaryColor: COLORS.THEME.PRIMARY }));
     localStorage.setItem('isColorResetDone', 'true');
   }
-  // if (localStorage.getItem('minTime')) {
-  //   dispatch(saveSettings({ minTime: minTime ? Number(minTime) : activeSettings.minTime }));
-  //   localStorage.removeItem('isMinTimeActive');
-  //   localStorage.removeItem('minTime');
-  // }
-  dispatch(validateIntegrations);
 
   return user;
 };

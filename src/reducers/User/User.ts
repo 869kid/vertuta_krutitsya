@@ -1,7 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 import { IntegrationAvailability, IntegrationDataDto } from '@models/user.model.ts';
-import { getDonateXAuthData } from '@domains/bids/external-integrations/DonateX/auth.ts';
 
 export interface UserInfo {
   username?: string | null;
@@ -31,9 +30,7 @@ const initialState: UserState = {
   userId: null,
   pointaucUserId: null,
   activeSettingsPresetId: '',
-  authData: {
-    donatex: getDonateXAuthData(),
-  },
+  authData: {},
   events: { aukus: { isValid: false } },
 };
 

@@ -4,8 +4,6 @@ import { Key, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 
-import BidsManagementDialog from '@components/BidsManagementConfirmation/Dialog';
-import { pointsManagementPresets } from '@components/BidsManagementConfirmation/utils';
 import { WheelItem } from '@models/wheel.model';
 import { RootState } from '@reducers/index';
 import { getSlot, getTotalSize } from '@utils/slots.utils';
@@ -32,7 +30,6 @@ const WinnerBackdrop = (props: WinnerBackdropProps) => {
   const finalWinner = dropOut ? _finalWinner : currentSpinWinner;
 
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [bidManagementOpen, setBidManagementOpen] = useState<boolean>(false);
   const [isLotDeleted, setIsLotDeleted] = useState<boolean>(false);
 
   const finalWinnerLot = useMemo(
@@ -79,8 +76,6 @@ const WinnerBackdrop = (props: WinnerBackdropProps) => {
     setLocalShowDeleteConfirmation(showDeleteConfirmation);
   };
 
-  const pointsAction = useMemo(() => pointsManagementPresets.returnAllExcept(id as string), [id]);
-
   return (
     <div style={{ pointerEvents: 'all' }} className={classes.wheelWinner}>
       <WinnerBackdropName name={currentSpinWinner.name} winnerName={finalWinner?.name} dropout={dropOut} />
@@ -112,18 +107,6 @@ const WinnerBackdrop = (props: WinnerBackdropProps) => {
                 </Button>
               </Group>
             </Modal>
-
-            {/* <Button onClick={() => setBidManagementOpen(true)} variant='outline' color='blue'>
-              {t('wheel.returnPointsToTheRest')}
-            </Button> */}
-
-            <BidsManagementDialog
-              open={bidManagementOpen}
-              onClose={() => setBidManagementOpen(false)}
-              actions={pointsAction}
-            >
-              {t('bidsManagement.modalTitle.returnAllExceptWinner')}
-            </BidsManagementDialog>
           </>
         )}
       </Group>

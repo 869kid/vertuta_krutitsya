@@ -1,4 +1,5 @@
 import { ActionIcon, Checkbox, Grid, Group, Stack, Text } from '@mantine/core';
+import { ReactNode } from 'react';
 import { IconChevronsLeft } from '@tabler/icons-react';
 import classNames from 'classnames';
 import { useMemo, useRef, useState } from 'react';
@@ -22,6 +23,7 @@ interface Props {
   centerItems?: boolean;
   showControls?: boolean;
   className?: string;
+  addButton?: ReactNode;
 }
 
 const ItemsPreview = ({
@@ -31,6 +33,7 @@ const ItemsPreview = ({
   className,
   showControls = true,
   centerItems = false,
+  addButton,
 }: Props) => {
   const [hideInactive, setHideInactive] = useState(false);
   const [collapsed, setCollapsed] = useStorageState('wheel.itemsPreview.collapsed', false);
@@ -125,7 +128,10 @@ const ItemsPreview = ({
               )}
             </AutoSizer>
           </div>
-          <Text size='lg'>{t('wheel.totalItems', { amount: activeItems.length })}</Text>
+          <Group justify='space-between' align='center'>
+            <Text size='lg'>{t('wheel.totalItems', { amount: activeItems.length })}</Text>
+            {addButton}
+          </Group>
         </Stack>
       )}
     </div>

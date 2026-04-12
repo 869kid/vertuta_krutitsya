@@ -1,92 +1,30 @@
-import { FC, useCallback } from 'react';
-import { Card, Image, Text, Group, Stack, AspectRatio } from '@mantine/core';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import ThumbUpIcon from '@mui/icons-material/ThumbUp';
-import dayjs from 'dayjs';
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
-import clsx from 'clsx';
+import { FC, ReactNode } from 'react';
+import { Card, Image, Text, Group } from '@mantine/core';
 
-import { VideoSnippet } from '@models/youtube.ts';
-
-import classes from './VideoPreview.module.css';
+import { VideoSnippet } from '@models/youtube';
 
 interface VideoPreviewProps extends VideoSnippet {
-  onSelect?: (id: string) => void;
   blurred?: boolean;
-  thumbnailContent?: React.ReactNode;
+  thumbnailContent?: ReactNode;
+  onSelect?: (videoId: string) => void;
 }
 
-const VideoPreview: FC<VideoPreviewProps> = ({
-  onSelect,
-  id: { videoId },
-  snippet: { title, channelTitle, publishedAt, thumbnails, viewCount, likeCount },
-  blurred = true,
-  thumbnailContent,
-}) => {
-  const handleSelect = useCallback(() => {
-    onSelect?.(videoId);
-  }, [onSelect, videoId]);
-
-  const thumbnailUrl = thumbnails?.high?.url || thumbnails?.medium?.url || thumbnails?.default?.url;
-  const formattedDate = dayjs(publishedAt).fromNow();
-  const formattedViews = new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(viewCount || 0);
-
-  const formattedLikes = new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(likeCount || 0);
+const VideoPreview: FC<VideoPreviewProps> = ({ id: videoId, snippet, thumbnailContent, onSelect }) => {
+  const thumbnailUrl = snippet.thumbnails.high?.url ?? snippet.thumbnails.medium?.url ?? snippet.thumbnails.default?.url;
 
   return (
-    <Card
-      className={clsx(classes.videoPreviewCard, { [classes.clickable]: !!onSelect })}
-      onClick={handleSelect}
-      withBorder
-      padding='sm'
-      radius='md'
-      style={{ cursor: 'pointer' }}
-    >
-      <Group align='flex-start' wrap='nowrap'>
-        <div className={classes.thumbnailContainer}>
-          <AspectRatio ratio={16 / 9} w={160} h={90}>
-            {!thumbnailContent && (
-              <Image
-                src={thumbnailUrl}
-                alt={title}
-                className={clsx(classes.videoThumbnail, { [classes.blurred]: blurred })}
-              />
-            )}
+    <Card withBorder padding='xs' radius='md' onClick={() => onSelect?.(videoId.videoId)} style={{ cursor: onSelect ? 'pointer' : undefined }}>
+      <div style={{ position: 'relative' }}>
+        {thumbnailUrl && <Image src={thumbnailUrl} alt={snippet.title} radius='sm' h={120} fit='cover' />}
+        {thumbnailContent && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {thumbnailContent}
-          </AspectRatio>
-        </div>
-        <Stack style={{ flex: 1 }} gap={0}>
-          <Text fw={500} lineClamp={2} size='md'>
-            {title}
-          </Text>
-
-          <Group gap='xs' wrap='nowrap' mb='xs'>
-            <Text size='sm' c='dark.2'>
-              {channelTitle}
-            </Text>
-            <FiberManualRecordIcon className={classes.videoPreviewIcon} sx={{ fontSize: 8, color: 'gray' }} />
-            <Text size='sm' c='dark.2'>
-              {formattedDate}
-            </Text>
-          </Group>
-
-          <Group gap='xs' wrap='nowrap'>
-            <Group gap={4} wrap='nowrap'>
-              <VisibilityIcon className={classes.videoPreviewIcon} sx={{ fontSize: 16 }} />
-              <Text size='sm'>{formattedViews}</Text>
-            </Group>
-            <Group gap={4} wrap='nowrap'>
-              <ThumbUpIcon className={classes.videoPreviewIcon} sx={{ fontSize: 16 }} />
-              <Text size='sm'>{formattedLikes}</Text>
-            </Group>
-          </Group>
-        </Stack>
+          </div>
+        )}
+      </div>
+      <Group mt='xs' gap='xs'>
+        <Text size='sm' fw={500} lineClamp={1}>{snippet.title}</Text>
+        <Text size='xs' c='dimmed'>{snippet.channelTitle}</Text>
       </Group>
     </Card>
   );

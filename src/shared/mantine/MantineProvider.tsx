@@ -78,14 +78,12 @@ const variantColorResolver: VariantColorsResolver = (input) => {
 const MantineProvider = ({ children }: { children: React.ReactNode }) => {
   const primaryColor = useSelector((root: RootState) => root.aucSettings.settings.primaryColor);
   const backgroundOverlayOpacity = useSelector((root: RootState) => root.aucSettings.settings.backgroundOverlayOpacity);
-  const darkAlpha = useSelector((root: RootState) => root.overlay.darkAlpha);
-  const backgroundTone = useSelector((root: RootState) => root.aucSettings.settings.backgroundTone);
 
   const adjustedPrimary = primaryColor === '#a6d4fa' ? '#228be6' : primaryColor ?? '#228be6';
 
   const uiOpacity = useMemo(
-    () => darkAlpha ?? calcUiElementsOpacity(backgroundOverlayOpacity),
-    [darkAlpha, backgroundOverlayOpacity],
+    () => calcUiElementsOpacity(backgroundOverlayOpacity),
+    [backgroundOverlayOpacity],
   );
 
   const theme = useMemo(() => {

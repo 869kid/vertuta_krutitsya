@@ -2,7 +2,20 @@ import { Component, FC, FunctionComponent, JSX } from 'react';
 import { Store } from '@tanstack/react-store';
 import EventEmitter from 'eventemitter3';
 
-import { Purchase } from '@reducers/Purchases/Purchases';
+export interface Purchase {
+  id: string;
+  username: string;
+  message: string;
+  cost: number;
+  color?: string;
+  timestamp?: number;
+  investorId?: string;
+  source?: string;
+  isDonation?: boolean;
+  rewardId?: string;
+  status?: string;
+  target?: string;
+}
 
 export type ID = 'donatePay' | 'da' | 'twitch' | 'tourniquet' | 'ihaq' | 'donatex' | 'donatePayEu' | 'donateHelper';
 export type BidType = 'donate' | 'points';
