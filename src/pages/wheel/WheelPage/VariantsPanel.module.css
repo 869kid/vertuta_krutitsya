@@ -33,6 +33,18 @@
 .variantName {
   flex: 1;
   min-width: 0;
+  cursor: text;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+.variantName:hover {
+  background-color: var(--mantine-color-dark-5);
+}
+
+.variantNameInput {
+  flex: 1;
+  min-width: 0;
 }
 
 .deleteButton {

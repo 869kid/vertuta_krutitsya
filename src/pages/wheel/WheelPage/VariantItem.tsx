@@ -1,6 +1,6 @@
-import { ActionIcon, Checkbox, Group, Stack, Text, UnstyledButton } from '@mantine/core';
+import { ActionIcon, Checkbox, Group, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconChevronRight, IconX } from '@tabler/icons-react';
-import { FC, useCallback } from 'react';
+import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Slot } from '@models/slot.model';
@@ -29,10 +29,35 @@ const VariantItem: FC<VariantItemProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const handleNameChange = useCallback(
-    (val: string) => onUpdate(slot.id, { name: val }),
-    [slot.id, onUpdate],
-  );
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(slot.name);
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditValue(slot.name);
+  }, [slot.name]);
+
+  useEffect(() => {
+    if (isEditing) {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const commitRename = useCallback(() => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== slot.name) {
+      onUpdate(slot.id, { name: trimmed });
+    } else {
+      setEditValue(slot.name);
+    }
+    setIsEditing(false);
+  }, [editValue, slot.name, slot.id, onUpdate]);
+
+  const cancelRename = useCallback(() => {
+    setEditValue(slot.name);
+    setIsEditing(false);
+  }, [slot.name]);
 
   const handleOwnerChange = useCallback(
     (val: string) => onUpdate(slot.id, { owner: val }),
@@ -55,9 +80,26 @@ const VariantItem: FC<VariantItemProps> = ({
     <div className={styles.variantItem} style={{ marginLeft: depth * 20 }}>
       <Group gap={8} wrap='nowrap' align='center'>
         <div className={styles.colorDot} style={{ backgroundColor: color ?? '#888' }} />
-        <Text className={styles.variantName} fw={600} size='sm' lineClamp={1}>
-          {slot.name || '—'}
-        </Text>
+        {isEditing ? (
+          <TextInput
+            ref={editInputRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.currentTarget.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename();
+              if (e.key === 'Escape') cancelRename();
+            }}
+            size='xs'
+            className={styles.variantNameInput}
+          />
+        ) : (
+          <UnstyledButton onClick={() => setIsEditing(true)} className={styles.variantName}>
+            <Text fw={600} size='sm' lineClamp={1}>
+              {slot.name || '—'}
+            </Text>
+          </UnstyledButton>
+        )}
         <ActionIcon
           variant='subtle'
           size='xs'
