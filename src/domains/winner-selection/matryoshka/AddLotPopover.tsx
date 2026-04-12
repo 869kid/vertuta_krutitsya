@@ -10,6 +10,8 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
+
+import AuthorSelect from '@shared/ui/AuthorSelect/AuthorSelect';
 import { useDisclosure } from '@mantine/hooks';
 import { IconPlus } from '@tabler/icons-react';
 import { useCallback, useState } from 'react';
@@ -108,11 +110,10 @@ const AddLotPopover = ({ onAdd, compact = false }: AddLotPopoverProps) => {
             onKeyDown={handleKeyDown}
           />
 
-          <TextInput
+          <AuthorSelect
             label={t('wheel.lotOwner', 'Author')}
-            placeholder={t('wheel.lotOwnerPlaceholder', 'Author name...')}
             value={owner}
-            onChange={(e) => setOwner(e.currentTarget.value)}
+            onChange={setOwner}
             onKeyDown={handleKeyDown}
           />
 

@@ -1,7 +1,7 @@
 import { ActionIcon, Badge, Group, Title, Tooltip } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconArrowLeft, IconHistory, IconHome } from '@tabler/icons-react';
-import { FC, Key, useCallback, useMemo, useRef, useState } from 'react';
+import { FC, Key, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -27,7 +27,7 @@ import {
   recordWin,
   nextRound,
 } from '@reducers/Matryoshka/Matryoshka';
-import { addSlot, createSlot, deleteSlot, initialSlots, setSlots } from '@reducers/Slots/Slots';
+import { addSlot, createSlot, deleteSlot, setSlots } from '@reducers/Slots/Slots';
 import {
   getLotsAtPath,
   navStackToParentPath,
@@ -68,18 +68,15 @@ const WheelPage: FC = () => {
     [slots, navigationStack, isInsideMatryoshka],
   );
 
-  const previousWheelItems = useRef<Slot[]>(initialSlots);
   const wheelItems = useMemo(() => SlotListToWheelList(currentLevelSlots), [currentLevelSlots]);
 
-  if (previousWheelItems.current === initialSlots) {
-    previousWheelItems.current = currentLevelSlots;
+  useEffect(() => {
     wheelController.current?.setItems(wheelItems);
-  }
+  }, [wheelItems]);
 
   const setCustomWheelItems = useCallback(
     (customItems: Slot[], saveSlots: boolean) => {
       wheelController.current?.setItems(SlotListToWheelList(customItems));
-      previousWheelItems.current = [];
 
       if (saveSlots) {
         dispatch(setSlots(customItems));

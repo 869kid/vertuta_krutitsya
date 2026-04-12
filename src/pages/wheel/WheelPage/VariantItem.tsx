@@ -1,9 +1,10 @@
-import { ActionIcon, Checkbox, Group, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
+import { ActionIcon, Checkbox, Group, Stack, Text, UnstyledButton } from '@mantine/core';
 import { IconChevronRight, IconX } from '@tabler/icons-react';
 import { FC, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Slot } from '@models/slot.model';
+import AuthorSelect from '@shared/ui/AuthorSelect/AuthorSelect';
 
 import styles from './VariantsPanel.module.css';
 
@@ -69,10 +70,9 @@ const VariantItem: FC<VariantItemProps> = ({
       </Group>
 
       <Group gap={8} mt={4} wrap='nowrap' align='center'>
-        <TextInput
+        <AuthorSelect
           value={slot.owner ?? ''}
-          onChange={(e) => handleOwnerChange(e.currentTarget.value)}
-          placeholder={t('wheel.lotOwnerPlaceholder', 'Author...')}
+          onChange={handleOwnerChange}
           size='xs'
           className={styles.ownerInput}
         />

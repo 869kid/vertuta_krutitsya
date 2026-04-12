@@ -1,0 +1,16 @@
+---
+alwaysApply: true
+description: Forces all agents to read PROJECT_KNOWLEDGE.md before starting work on the project.
+---
+
+## Shared Project Knowledge
+
+Before making any changes to the codebase, **read `PROJECT_KNOWLEDGE.md`** in the project root. It contains:
+
+- Architecture decisions and their rationale
+- Known issues and gotchas that will waste your time if you don't know about them
+- Data model changes, conventions, and open tasks from previous sessions
+
+This file is maintained by the `vertuta-debrief` skill and is the primary way agents share context across sessions.
+
+**At the end of a productive session**, use the `vertuta-debrief` skill to append any new findings, decisions, or gotchas discovered during the session.

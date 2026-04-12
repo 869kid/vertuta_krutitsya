@@ -669,6 +669,10 @@
       "classic": "Классическое"
     },
     "wheel": "Колесо",
+    "navigation": {
+      "home": "Домой",
+      "back": "Назад"
+    },
     "spin": "Крутить",
     "nextDuel": "Продолжить",
     "spinning": "Крутимся...",
@@ -811,6 +815,11 @@
     "spicyFinal": "Финал с перчинкой",
     "connectTwitchForMoreEmotes": "Подключите Twitch, чтобы выбрать больше изображений в колесе (7TV, BTTV, FFZ)",
     "addLotsToAuc": "Сохранить лоты в аукцион",
+    "authorSelectPlaceholder": "Автор...",
+    "authorSearchPlaceholder": "Поиск...",
+    "noAuthorsFound": "Не найдено",
+    "addAuthor": "Добавить автора",
+    "newAuthorPlaceholder": "Имя...",
     "coreImage": {
       "expandPanel": "Выбрать изображение в колесе",
       "wheelOverlay": "Изменить",

@@ -65,6 +65,7 @@ export interface BaseWheelProps<T extends WheelItem> {
   items: T[];
   showDeleteConfirmation?: boolean;
   deleteItem?: (id: ID, showConfirmation?: boolean) => void;
+  onSegmentClick?: (item: T) => void;
   controller: MutableRefObject<WheelController | null>;
   coreImage?: string | null;
   onCoreImageChange?: (image: string) => void;
@@ -84,6 +85,7 @@ const BaseWheel = <T extends WheelItem>(props: BaseWheelProps<T>) => {
     showDeleteConfirmation,
     resetWheel,
     deleteItem,
+    onSegmentClick,
     controller,
     coreImage,
     onCoreImageChange,
@@ -342,6 +344,42 @@ const BaseWheel = <T extends WheelItem>(props: BaseWheelProps<T>) => {
     [clearWinner, controller, resetPosition, spin, normalizedItems, wheelDrawer],
   );
 
+  const handleCanvasClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!onSegmentClick || !wheelCanvas.current || winnerItem) return;
+
+      const canvas = wheelCanvas.current;
+      const rect = canvas.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const clickX = e.clientX - rect.left - centerX;
+      const clickY = e.clientY - rect.top - centerY;
+
+      const distFromCenter = Math.sqrt(clickX * clickX + clickY * clickY);
+      const coreRadius = rect.width * 0.1;
+      if (distFromCenter < coreRadius) return;
+
+      let clickAngle = Math.atan2(clickY, clickX);
+      if (clickAngle < 0) clickAngle += Math.PI * 2;
+
+      const currentRotation = getCurrentRotation();
+      const rotationRad = ((currentRotation % 360) * Math.PI) / 180;
+      let adjustedAngle = clickAngle - rotationRad;
+      while (adjustedAngle < 0) adjustedAngle += Math.PI * 2;
+      while (adjustedAngle >= Math.PI * 2) adjustedAngle -= Math.PI * 2;
+
+      const clicked = normalizedItems.find(
+        ({ startAngle, endAngle }) => adjustedAngle >= startAngle && adjustedAngle <= endAngle,
+      );
+
+      if (clicked) {
+        const original = items.find((item) => item.id === clicked.id);
+        if (original) onSegmentClick(original);
+      }
+    },
+    [onSegmentClick, winnerItem, normalizedItems, items, getCurrentRotation],
+  );
+
   const [isClickOusideAllowed, setIsClickOusideAllowed] = useState(true);
 
   return (
@@ -361,6 +399,18 @@ const BaseWheel = <T extends WheelItem>(props: BaseWheelProps<T>) => {
           )}
           <div className={classes.wheelCanvasWrapper}>
             <canvas ref={wheelCanvas} />
+            {onSegmentClick && (
+              <div
+                onClick={handleCanvasClick}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'all',
+                  cursor: 'pointer',
+                  borderRadius: '50%',
+                }}
+              />
+            )}
           </div>
           {onCoreImageChange && (
             <Popover width={420} withArrow position='right' closeOnClickOutside={isClickOusideAllowed}>

@@ -742,6 +742,11 @@
       "classic": "Classic"
     },
     "addLotsToAuc": "Save lots in auction",
+    "authorSelectPlaceholder": "Author...",
+    "authorSearchPlaceholder": "Search...",
+    "noAuthorsFound": "No matches",
+    "addAuthor": "Add author",
+    "newAuthorPlaceholder": "Name...",
     "connectTwitchForMoreEmotes": "Connect Twitch to choose more images on the wheel (7TV, BTTV, FFZ)",
     "deleteLot": "Delete Lot",
     "deleteLotConfirmationModal": {
@@ -902,6 +907,10 @@
       "verifyAt": "Verify at"
     },
     "wheel": "Wheel",
+    "navigation": {
+      "home": "Home",
+      "back": "Back"
+    },
     "winner": "Winner",
     "randomSpin": "Random spin time",
     "helpNotification": {
