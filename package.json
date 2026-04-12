@@ -25,7 +25,9 @@
     "verify:authenticity": "node scripts/verify-authenticity.js",
     "docker:build": "docker build -t pointauc-frontend .",
     "docker:run": "docker run --rm --name pointauc-frontend -p 3000:80 pointauc-frontend",
-    "docker:up": "pnpm run docker:build && pnpm run docker:run"
+    "docker:up": "pnpm run docker:build && pnpm run docker:run",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "7tv": "^0.1.2",
@@ -158,6 +160,7 @@
     "vite": "^7.3.0",
     "vite-bundle-analyzer": "^1.3.2",
     "vite-plugin-svgr": "^4.5.0",
-    "vite-tsconfig-paths": "^6.0.3"
+    "vite-tsconfig-paths": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

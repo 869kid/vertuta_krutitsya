@@ -1,0 +1,37 @@
+---
+description: Rules for running and maintaining the Vitest test suite. Agents must run tests before commits and assess whether new tests are needed.
+alwaysApply: true
+---
+
+## Test Suite
+
+This project has a Vitest test suite (`pnpm test`). Tests live in `src/__tests__/`.
+
+### Before Every Commit
+
+1. Run `pnpm test` and confirm **all tests pass**.
+2. If any test fails, **fix the root cause** (not the test) unless the test expectation is outdated.
+3. If you changed business logic in any of these files, check whether existing tests still cover the change:
+   - `src/utils/matryoshka.utils.ts` -> `matryoshka.utils.test.ts`
+   - `src/utils/lockedPercentage.utils.ts` -> `lockedPercentage.utils.test.ts`
+   - `src/utils/slots.utils.ts` -> `slots.utils.test.ts`
+   - `src/services/PredictionService.ts` -> `predictionService.test.ts`
+   - `src/domains/winner-selection/wheel-of-random/BaseWheel/helpers.ts` -> `wheelHelpers.test.ts`
+   - `src/domains/auction/archive/lib/parsers/` -> `parsers.test.ts`
+   - `src/domains/auction/archive/lib/validators.ts` -> `validators.test.ts`
+   - `src/shared/lib/event-queue/` -> `eventQueue.test.ts`
+   - `src/reducers/Slots/Slots.ts` -> `slotsReducer.test.ts`
+4. If you added a **new pure function** or **new reducer action** that has non-trivial logic, add a test for it.
+
+### When NOT to Write Tests
+
+- Simple UI-only changes (styles, translations, layout).
+- Generated code (`src/api/openapi/`).
+- One-liner pass-through functions with no branching.
+
+### Test Style
+
+- Use `describe`/`it` from `vitest`. Globals are enabled.
+- Import source via path aliases (`@utils/...`, `@models/...`, etc.).
+- Test files go in `src/__tests__/<module>.test.ts`.
+- Focus on edge cases: empty arrays, null/undefined, boundary values, -1 from findIndex.

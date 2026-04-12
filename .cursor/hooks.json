@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "type": "prompt",
+        "prompt": "Before finishing, check if any source files were modified in this session (look at your tool call history for Write/StrReplace calls to .ts/.tsx files under src/).\n\nIf source files WERE modified:\n1. Run `pnpm test` to execute the test suite.\n2. If all tests pass, report the result briefly.\n3. If any tests fail, analyze the failure:\n   - If the failure is caused by your changes, fix the code and re-run tests.\n   - If the test expectation is outdated due to an intentional change, update the test.\n4. If you modified or added business logic in a file that has a corresponding test file in src/__tests__/, check if the existing tests still cover the new behavior. If not, add a focused test for the new logic.\n5. If you created a new utility function or reducer action with non-trivial logic (branching, loops, math), add at least one test for the happy path and one edge case.\n\nIf NO source files were modified (only docs, config, or no changes at all), skip testing.\n\nHook input: $ARGUMENTS",
+        "timeout": 120,
+        "loop_limit": 3
+      }
+    ]
+  }
+}

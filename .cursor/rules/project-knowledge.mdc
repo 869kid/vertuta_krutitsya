@@ -3,6 +3,12 @@ alwaysApply: true
 description: Forces all agents to read PROJECT_KNOWLEDGE.md before starting work on the project.
 ---
 
+## Git Workflow
+
+- **`origin`** → `https://github.com/869kid/vertuta_krutitsya.git` — push here (default).
+- **`upstream`** → `https://github.com/Pointauc/pointauc_frontend.git` — read-only, original fork.
+- Plain `git push` works as expected (pushes to `origin`).
+
 ## Shared Project Knowledge
 
 Before making any changes to the codebase, **read `PROJECT_KNOWLEDGE.md`** in the project root. It contains:

@@ -63,4 +63,35 @@ Previously, if the current level had exactly 1 multi-layer slot with children, t
 ### useSyncExternalStore requires stable getSnapshot references (2026-04-13)
 `useSyncExternalStore` compares snapshots via `Object.is`. If `getSnapshot` returns a new array/object reference each call (e.g. `JSON.parse(...)` or `[]` literal), React detects a "changed" store on every consistency check and enters an infinite re-render loop, crashing the app. **Always cache the parsed result** and return the same reference when the underlying data hasn't changed. See `src/shared/lib/useAuthorHistory.ts` for the correct pattern: compare the raw `localStorage.getItem()` string with a cached copy before re-parsing.
 
+## Conventions
+
+### Git remotes and default branch (2026-04-13)
+Remotes were reconfigured: `origin` → `https://github.com/869kid/vertuta_krutitsya.git` (push here), `upstream` → `https://github.com/Pointauc/pointauc_frontend.git` (read-only, original fork). Default branch renamed from `master` to `main`. Plain `git push` / `git pull` works against `origin/main`. The rule in `.cursor/rules/project-knowledge.mdc` also documents this.
+
+## Scripts & Tools
+
+### Vitest test suite added (2026-04-13)
+`pnpm test` runs 165 unit tests across 9 files in `src/__tests__/`. Config at `vitest.config.ts` uses `vite-tsconfig-paths` for alias resolution, `environment: 'node'`, `globals: true`. Tests cover: matryoshka tree ops, locked percentage math, PredictionService weighted selection, wheel angle helpers, CSV/JSON parsers, archive validators, slot utils, EventQueue, and Slots reducer. All tests are pure-logic (no DOM/jsdom needed). Run time ~1.6s.
+
+### Testing rule and stop-hook for agents (2026-04-13)
+`.cursor/rules/testing.mdc` (`alwaysApply: true`) — instructs agents to run `pnpm test` before every commit and add tests for new non-trivial logic. Contains source-to-test file mapping.
+`.cursor/hooks.json` — prompt hook on `stop` event. When an agent finishes and has modified `.ts/.tsx` files, the hook triggers a test run, failure analysis, and optional new test creation. `loop_limit: 3`, `timeout: 120s`.
+
+## Known Issues & Gotchas
+
+### getSlotFromSeed returns -1 for empty slots (2026-04-13)
+`getSlotFromSeed` in `src/services/PredictionService.ts` returns -1 when the slots array is empty. Callers like `useNormalWheel` do `items[getSlotFromSeed(...)]` without guarding, which would crash at runtime. With zero-weight slots it returns 0 (first slot always "wins"), which is degenerate but not a crash.
+
+### updateSlotAmount has no findIndex guard (2026-04-13)
+Internal helper `updateSlotAmount` in `src/reducers/Slots/Slots.ts` calls `slots[findIndex(...)]` without checking for -1. If the slot id is not found, `transform(undefined)` will throw. Compare with `updateSlotIsFavorite` which does guard. This is a latent crash if a stale id is dispatched.
+
+### normalizeSlotsChances produces NaN when total is 0 (2026-04-13)
+`PredictionService.normalizeSlotsChances` in `src/services/PredictionService.ts` divides by `getTotalSize(slots)`. If all amounts are 0, every chance becomes `NaN`. Downstream code that displays or compares these values may break silently.
+
+### JSON parser passes garbage objects through without validation (2026-04-13)
+`parseJSON` in `src/domains/auction/archive/lib/parsers/jsonParser.ts` casts non-string array items directly to `ArchivedLot` without checking they have `name`/`amount` fields. Malformed JSON like `[{"garbage": true}]` will produce invalid lot objects that may cause crashes later in the pipeline.
+
 ## Open Tasks
+
+### CI workflow still references `master` (2026-04-13)
+`.github/workflows/deploy-production.yml` triggers on `push.branches: [master]`. Now that the default branch is `main`, the workflow will never trigger. Change the trigger to `main` when ready to use CI.
