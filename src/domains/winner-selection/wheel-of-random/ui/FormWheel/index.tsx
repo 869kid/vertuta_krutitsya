@@ -9,9 +9,10 @@ import BaseWheel, { BaseWheelProps } from '../../BaseWheel/BaseWheel';
 interface Props extends Pick<BaseWheelProps<any>, 'controller' | 'className' | 'onOptimalSizeChange'> {
   deleteItem?: (id: Key) => void;
   finalItems: WheelItem[];
+  onSegmentClick?: (item: WheelItem) => void;
 }
 
-const WheelComponent = ({ controller, deleteItem, finalItems, className, onOptimalSizeChange }: Props) => {
+const WheelComponent = ({ controller, deleteItem, finalItems, className, onOptimalSizeChange, onSegmentClick }: Props) => {
   const coreImage = useWatch<Wheel.Settings>({ name: 'coreImage' });
   const format = useWatch<Wheel.Settings>({ name: 'format' });
   const wheelStyles = useWatch<Wheel.Settings>({ name: 'wheelStyles' });
@@ -39,6 +40,7 @@ const WheelComponent = ({ controller, deleteItem, finalItems, className, onOptim
       deleteItem={format === WheelFormat.Default ? handleDeleteItem : undefined}
       items={finalItems}
       onCoreImageChange={onCoreImageChange}
+      onSegmentClick={onSegmentClick}
       dropOut={format === WheelFormat.Dropout}
       className={className}
       onOptimalSizeChange={onOptimalSizeChange}

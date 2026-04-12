@@ -1,12 +1,10 @@
 import { WheelItem, WheelItemWithAngle } from '@models/wheel.model.ts';
-import { getTotal } from '@utils/common.utils.ts';
 
 const defineAngle = (items: WheelItem[]) => {
   let angleOffset = 0;
-  const totalSize = getTotal(items, (item) => item.amount);
+  const count = items.length || 1;
   return items.map<WheelItemWithAngle>((item) => {
-    const size = (item.amount || 1) / totalSize;
-    const angle = 2 * Math.PI * size;
+    const angle = (2 * Math.PI) / count;
     const resultItem = {
       ...item,
       startAngle: angleOffset,

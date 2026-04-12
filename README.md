@@ -1,72 +1,91 @@
-# Auction Service for Streamers (Frontend) – [pointauc.com](https://pointauc.com)
+# Vertuta Krutitsya
 
-## 📖 User Guide (Comprehensive Feature Reference)
+Wheel-of-fortune app for streamers. Fork of [Pointauc](https://github.com/Pointauc/pointauc_frontend) stripped down to the wheel, with history tracking and matryoshka mode.
 
-The documentation below is aimed at streamers and viewers — it explains every feature of Pointauc in detail:
+## Tech Stack
 
-https://pointauc.com/docs/
+**Frontend**
 
-## 🛠️ Tech Stack (at a glance)
+- React 19 + Vite + TypeScript
+- Redux Toolkit
+- Mantine 8
+- Tailwind / CSS-Modules
+- i18next
 
-- **React 19 + Vite + TypeScript**
-- **Redux Toolkit** – global state management
-- **Mantine** – component library
-- **Socket.IO & Centrifuge** – real-time communication with the backend and external services
-- **i18next** – internationalisation
-- **Tailwind / CSS-Modules** – styling
+**Backend**
 
-## 🚀 Getting Started
+- .NET 9 (ASP.NET Core)
+- Entity Framework Core + PostgreSQL
+- Swagger / OpenAPI
+
+## Getting Started
 
 ### Prerequisites
 
 - **Node.js >= 22**
 - **pnpm**
 
-### Installation & Development Server
+### Frontend
 
 ```bash
-# install dependencies
 pnpm install
-
-# start the dev server (Vite)
 pnpm dev
 ```
 
-## 🔐 Authenticity Verification
+Dev server starts at `http://localhost:5173`.
 
-The code running on [pointauc.com](https://pointauc.com) can be verified against this repository. Each deployment generates SHA-256 hashes of all HTML, JS, and CSS files, published as an immutable [GitHub release](https://github.com/Pointauc/pointauc_frontend/releases) with the tag format `deploy-<commit-sha>`.
+### Server
 
-### Verify Deployed Files
+There are two ways to run the backend: via Docker Compose (recommended) or manually.
+
+#### Option 1 — Docker Compose (server + database)
+
+Requires **Docker** and **Docker Compose**.
 
 ```bash
-# Clone the repository
-git clone https://github.com/Pointauc/pointauc_frontend.git
-cd pointauc_frontend
-
-# Install dependencies
-pnpm install
-
-# Verify the deployed files
-pnpm verify:authenticity
+docker compose up -d
 ```
 
-This script downloads the hash manifest from the latest release, fetches each file from the live site, compares hashes, and shows which files match or differ
+This starts:
 
-### Why This Matters
+| Service    | Port   | Description                    |
+|------------|--------|--------------------------------|
+| `db`       | 5432   | PostgreSQL 16                  |
+| `server`   | 8080   | .NET API (auto-runs migrations)|
 
-- **Transparency**: Anyone can independently verify that the deployed website matches the source code
-- **Security**: Even if our server is compromised, you can detect unauthorized modifications
+Swagger UI is available at `http://localhost:8080/swagger`.
 
-### Important Note
+To stop everything:
 
-Pointeauc uses claudflare which may inject a script into the HTML files. The Cloudflare script provides DDoS protection and bot mitigation and doesn't affect the website functionality.
+```bash
+docker compose down
+```
 
-If you want to verify the integrity of HTML files manually, you need to strip the claudflare script tag. This process is done AUTOMATICALLY by the verification script.
+To wipe the database volume and start fresh:
 
-## 📝 Contribution guidelines
+```bash
+docker compose down -v
+```
 
-TBD
+#### Option 2 — Run manually
 
-## 💡 Suggestions & Bug Reports
+Requires **.NET 9 SDK** and a running **PostgreSQL** instance.
 
-Found a bug or have an idea? Please [open an issue](https://github.com/Pointauc/pointauc_frontend/issues).
+1. Make sure PostgreSQL is running and the connection string in `server/appsettings.json` is correct (default: `Host=localhost;Port=5432;Database=vertuta;Username=vertuta;Password=vertuta`).
+
+2. Run the server:
+
+```bash
+cd server
+dotnet run
+```
+
+The server applies EF Core migrations on startup automatically, so no separate `dotnet ef database update` step is needed.
+
+API will be at `http://localhost:5062` (HTTPS on 7062), Swagger at the same address under `/swagger`.
+
+### Environment variables
+
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `ConnectionStrings__DefaultConnection` | server | PostgreSQL connection string (overrides appsettings) |

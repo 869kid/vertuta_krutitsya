@@ -1,14 +1,13 @@
 import { ActionIcon, Checkbox, Grid, Group, Stack, Text } from '@mantine/core';
-import { ReactNode } from 'react';
+import { useState } from 'react';
 import { IconChevronsLeft } from '@tabler/icons-react';
 import classNames from 'classnames';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { FixedSizeList } from 'react-window';
 
 import { WheelFormat } from '@constants/wheel.ts';
-import * as wheelItem from '@domains/winner-selection/wheel-of-random/lib/item';
 import Item from '@domains/winner-selection/wheel-of-random/ui/ItemsPreview/Item';
 import useStorageState from '@hooks/useStorageState.ts';
 import { WheelItemWithMetadata } from '@models/wheel.model.ts';
@@ -23,7 +22,6 @@ interface Props {
   centerItems?: boolean;
   showControls?: boolean;
   className?: string;
-  addButton?: ReactNode;
 }
 
 const ItemsPreview = ({
@@ -33,7 +31,6 @@ const ItemsPreview = ({
   className,
   showControls = true,
   centerItems = false,
-  addButton,
 }: Props) => {
   const [hideInactive, setHideInactive] = useState(false);
   const [collapsed, setCollapsed] = useStorageState('wheel.itemsPreview.collapsed', false);
@@ -50,7 +47,6 @@ const ItemsPreview = ({
       ),
     [activeItems],
   );
-  const total = useMemo(() => allItems.reduce((acc, item) => acc + wheelItem.getAmount(item), 0), [allItems]);
   const visibleItems = useMemo(
     () => (hideInactive ? allItems.filter((item) => activeMap.get(item.id)) : allItems),
     [hideInactive, allItems, activeMap],
@@ -62,7 +58,7 @@ const ItemsPreview = ({
           return a.isFavorite ? -1 : 1;
         }
 
-        return wheelItem.getAmount(b) - wheelItem.getAmount(a)
+        return a.name.localeCompare(b.name);
       });
     },
     [visibleItems]
@@ -120,7 +116,6 @@ const ItemsPreview = ({
                         item={allSorted[index]}
                         actionable={allSorted.length < 300}
                         disabled={!activeMap.get(allSorted[index].id)}
-                        total={total}
                       />
                     </div>
                   )}
@@ -128,10 +123,7 @@ const ItemsPreview = ({
               )}
             </AutoSizer>
           </div>
-          <Group justify='space-between' align='center'>
-            <Text size='lg'>{t('wheel.totalItems', { amount: activeItems.length })}</Text>
-            {addButton}
-          </Group>
+          <Text size='sm' c='dimmed'>{t('wheel.totalItems', { amount: activeItems.length })}</Text>
         </Stack>
       )}
     </div>

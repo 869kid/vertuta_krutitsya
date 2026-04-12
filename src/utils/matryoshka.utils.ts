@@ -62,27 +62,53 @@ export function updateLotInTree(
   lots: Slot[],
   id: string,
   changes: Partial<Slot>,
-  parentPath: string[] = [],
+  parentPath?: string[],
 ): Slot[] {
-  if (parentPath.length === 0) {
+  if (parentPath && parentPath.length > 0) {
     return lots.map((l) => {
-      if (l.id === id) {
-        const updated = { ...l, ...changes };
-        if (changes.isMultiLayer === false) {
-          updated.children = [];
-        }
-        return updated;
+      if (l.id === parentPath[0]) {
+        return {
+          ...l,
+          children: updateLotInTree(l.children ?? [], id, changes, parentPath.slice(1)),
+        };
       }
       return l;
     });
   }
 
   return lots.map((l) => {
-    if (l.id === parentPath[0]) {
-      return {
-        ...l,
-        children: updateLotInTree(l.children ?? [], id, changes, parentPath.slice(1)),
-      };
+    if (l.id === id) {
+      const updated = { ...l, ...changes };
+      if (changes.isMultiLayer === false) {
+        updated.children = [];
+      }
+      return updated;
+    }
+    if (l.children && l.children.length > 0) {
+      return { ...l, children: updateLotInTree(l.children, id, changes) };
+    }
+    return l;
+  });
+}
+
+export function removeLotByIdDeep(lots: Slot[], id: string): Slot[] {
+  return lots
+    .filter((l) => l.id !== id)
+    .map((l) => {
+      if (l.children && l.children.length > 0) {
+        return { ...l, children: removeLotByIdDeep(l.children, id) };
+      }
+      return l;
+    });
+}
+
+export function addLotToParent(lots: Slot[], parentId: string, newSlot: Slot): Slot[] {
+  return lots.map((l) => {
+    if (l.id === parentId) {
+      return { ...l, children: [...(l.children ?? []), newSlot] };
+    }
+    if (l.children && l.children.length > 0) {
+      return { ...l, children: addLotToParent(l.children, parentId, newSlot) };
     }
     return l;
   });

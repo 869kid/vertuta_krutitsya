@@ -1,10 +1,9 @@
-import { Divider, Group, Text } from '@mantine/core';
+import { Group, Text } from '@mantine/core';
 import HighlightIcon from '@mui/icons-material/Highlight';
 import StarIcon from '@mui/icons-material/Star';
 import classNames from 'classnames';
-import { useContext, useMemo } from 'react';
+import { useContext } from 'react';
 
-import * as wheelItem from '@domains/winner-selection/wheel-of-random/lib/item';
 import { WheelContext } from '@domains/winner-selection/wheel-of-random/settings/ui/Context/WheelContext';
 import { WheelItemWithMetadata } from '@models/wheel.model.ts';
 
@@ -13,14 +12,11 @@ import classes from './Item.module.css';
 interface Props {
   item: WheelItemWithMetadata;
   disabled: boolean;
-  total: number;
   actionable?: boolean;
 }
 
-const Item = ({ item, disabled, total, actionable }: Props) => {
+const Item = ({ item, disabled, actionable }: Props) => {
   const { name, color } = item;
-  const amountToDisplay = wheelItem.getAmount(item);
-  const chance = useMemo(() => ((amountToDisplay / total) * 100).toFixed(1), [amountToDisplay, total]);
   const { controller } = useContext(WheelContext);
 
   const onHover = () => {
@@ -41,9 +37,6 @@ const Item = ({ item, disabled, total, actionable }: Props) => {
     >
       { item.isFavorite && <StarIcon /> }
       <Text className={classes.name}>{name}</Text>
-      <Text className={classes.amount}>{Number(amountToDisplay.toFixed(2))}</Text>
-      <Divider orientation='vertical' />
-      <Text className={classes.chance}>{chance + ' %'}</Text>
       <div className={classes.color}>
         {!disabled && (
           <>

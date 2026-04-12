@@ -9,6 +9,7 @@ export interface Slot {
   isFavorite?: boolean;
   isMultiLayer?: boolean;
   children?: Slot[];
+  owner?: string;
 }
 
 export type SlotResponse = Omit<Slot, 'extra'>;

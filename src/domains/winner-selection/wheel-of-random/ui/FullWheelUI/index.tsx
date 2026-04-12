@@ -77,10 +77,10 @@ interface RandomWheelProps<TWheelItem extends WheelItem = WheelItem> {
   elements?: Partial<SettingElements>;
   children?: ReactNode;
   wheelRef?: React.RefObject<RandomWheelController | null>;
-  addButton?: ReactNode;
   // callbacks
   deleteItem?: (id: Key) => void;
   onWin?: (winner: TWheelItem) => void;
+  onSegmentClick?: (item: TWheelItem) => void;
   onWheelItemsChanged?: (items: TWheelItem[]) => void;
   onSettingsChanged?: (settings: Wheel.Settings) => void;
   onSpinStart?: (params: SpinStartCallbackParams) => void;
@@ -109,13 +109,13 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
   items: _itemsFromProps,
   deleteItem,
   onWin,
+  onSegmentClick,
   onWheelItemsChanged,
   onSpinStart,
   shouldShuffle = true,
   elements: elementsFromProps,
   children,
   wheelRef,
-  addButton,
 }: RandomWheelProps<TWheelItem>): ReactElement => {
   const [itemsFromProps, setItemsFromProps] = useState<WheelItem[]>(_itemsFromProps);
   const elements = useMemo(() => ({ ...initialAvailableSettings, ...elementsFromProps }), [elementsFromProps]);
@@ -227,11 +227,9 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
   const { items, init, extraSettings, renderSubmitButton, onSpinEnd, content } = wheelStrategy;
 
   const filteredItems = useMemo(() => {
-    const filtered = getTotalSize(itemsFromProps)
-      ? itemsFromProps.filter(({ amount }) => amount && amount > 0)
-      : itemsFromProps.map((item) => ({ ...item, amount: 1 }));
-
-    return filtered.sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name));
+    return itemsFromProps
+      .map((item) => ({ ...item, amount: 1 }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [itemsFromProps]);
 
   useSyncEffect(() => {
@@ -394,7 +392,7 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
         {soundtrackEnabled && soundtrackSource != null && (
           <PlayerFactory source={soundtrackSource} ref={soundtrackPlayerRef} displayAs='hidden' />
         )}
-        {!content && elements.preview && <ItemsPreview allItems={filteredItems} activeItems={items} format={format} addButton={addButton} />}
+        {!content && elements.preview && <ItemsPreview allItems={filteredItems} activeItems={items} format={format} />}
         {content && <div className='wheel-content-negative-space' />}
         <WheelFlexboxAutosizer>
           {({ onOptimalSizeChange }) => (
@@ -403,6 +401,7 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
               deleteItem={deleteWheelItem}
               controller={wheelController}
               onOptimalSizeChange={onOptimalSizeChange}
+              onSegmentClick={onSegmentClick as ((item: WheelItem) => void) | undefined}
             />
           )}
         </WheelFlexboxAutosizer>

@@ -1,6 +1,6 @@
-import { ActionIcon, Badge, Button, Group, Title, Tooltip } from '@mantine/core';
+import { ActionIcon, Badge, Group, Title, Tooltip } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowRight, IconHistory } from '@tabler/icons-react';
+import { IconArrowLeft, IconHistory, IconHome } from '@tabler/icons-react';
 import { FC, Key, useCallback, useMemo, useRef, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -9,9 +9,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { historyApi } from '@api/historyApi';
 import SlotsPresetInput from '@components/Form/SlotsPresetInput/SlotsPresetInput.tsx';
 import PageContainer from '@components/PageContainer/PageContainer';
-import AddLotPopover, { NewLotData } from '@domains/winner-selection/matryoshka/AddLotPopover';
 import HistoryPanel from '@domains/winner-selection/history/HistoryPanel';
-import MatryoshkaBreadcrumb from '@domains/winner-selection/matryoshka/MatryoshkaBreadcrumb';
+import MatryoshkaNavigation from '@domains/winner-selection/matryoshka/MatryoshkaNavigation';
 import MatryoshkaSegmentModal from '@domains/winner-selection/matryoshka/MatryoshkaSegmentModal';
 import MatryoshkaWinnerModal from '@domains/winner-selection/matryoshka/MatryoshkaWinnerModal';
 import RandomWheel, { RandomWheelController } from '@domains/winner-selection/wheel-of-random/ui/FullWheelUI';
@@ -29,9 +28,18 @@ import {
   nextRound,
 } from '@reducers/Matryoshka/Matryoshka';
 import { addSlot, createSlot, deleteSlot, initialSlots, setSlots } from '@reducers/Slots/Slots';
-import { getLotsAtPath, navStackToParentPath, removeLotByIdInTree, cleanEmptyMultiLayerLots, addLotToTree } from '@utils/matryoshka.utils';
+import {
+  getLotsAtPath,
+  navStackToParentPath,
+  removeLotByIdInTree,
+  cleanEmptyMultiLayerLots,
+  updateLotInTree,
+  removeLotByIdDeep,
+  addLotToParent,
+} from '@utils/matryoshka.utils';
 import { SlotListToWheelList } from '@utils/slots.utils';
 
+import VariantsPanel from './VariantsPanel';
 import styles from './WheelPage.module.css';
 
 const WheelPage: FC = () => {
@@ -68,18 +76,6 @@ const WheelPage: FC = () => {
     wheelController.current?.setItems(wheelItems);
   }
 
-  const soleMatryoshka = useMemo(() => {
-    if (
-      currentLevelSlots.length === 1 &&
-      currentLevelSlots[0].isMultiLayer &&
-      currentLevelSlots[0].children &&
-      currentLevelSlots[0].children.length > 0
-    ) {
-      return currentLevelSlots[0];
-    }
-    return null;
-  }, [currentLevelSlots]);
-
   const setCustomWheelItems = useCallback(
     (customItems: Slot[], saveSlots: boolean) => {
       wheelController.current?.setItems(SlotListToWheelList(customItems));
@@ -103,6 +99,46 @@ const WheelPage: FC = () => {
       }
     },
     [isInsideMatryoshka, navigationStack, slots, dispatch],
+  );
+
+  const handleDeleteVariant = useCallback(
+    (id: string) => {
+      const updatedSlots = removeLotByIdDeep(slots, id);
+      dispatch(setSlots(cleanEmptyMultiLayerLots(updatedSlots)));
+    },
+    [slots, dispatch],
+  );
+
+  const handleUpdateVariant = useCallback(
+    (id: string, changes: Partial<Slot>) => {
+      const updatedSlots = updateLotInTree(slots, id, changes);
+      dispatch(setSlots(updatedSlots));
+    },
+    [slots, dispatch],
+  );
+
+  const handleAddVariant = useCallback(
+    (name: string, isMultiLayer: boolean, parentId?: string) => {
+      const newSlot = createSlot({
+        name,
+        amount: 1,
+        isMultiLayer,
+        children: isMultiLayer ? [] : undefined,
+      });
+
+      if (parentId) {
+        const updatedSlots = addLotToParent(slots, parentId, newSlot);
+        dispatch(setSlots(updatedSlots));
+      } else {
+        dispatch(addSlot({
+          name,
+          amount: 1,
+          isMultiLayer,
+          children: isMultiLayer ? [] : undefined,
+        }));
+      }
+    },
+    [slots, dispatch],
   );
 
   const handleWin = useCallback(
@@ -171,40 +207,48 @@ const WheelPage: FC = () => {
     [saveSettings, initialSettings?.id],
   );
 
-  const handleAddLot = useCallback(
-    (data: NewLotData) => {
-      const newSlot = createSlot({
-        name: data.name,
-        amount: data.amount,
-        isMultiLayer: data.isMultiLayer,
-        children: data.isMultiLayer ? [] : undefined,
-      });
-
-      if (isInsideMatryoshka) {
-        const parentPath = navStackToParentPath(navigationStack);
-        const updatedSlots = addLotToTree(slots, parentPath, newSlot);
-        dispatch(setSlots(updatedSlots));
-      } else {
-        dispatch(addSlot({
-          name: data.name,
-          amount: data.amount,
-          isMultiLayer: data.isMultiLayer,
-          children: data.isMultiLayer ? [] : undefined,
-        }));
-      }
-    },
-    [isInsideMatryoshka, navigationStack, slots, dispatch],
+  const importButton = useMemo(
+    () => <SlotsPresetInput buttonTitle='Импорт' onChange={setCustomWheelItems} />,
+    [setCustomWheelItems],
   );
 
-  const addButton = useMemo(
-    () => <AddLotPopover onAdd={handleAddLot} />,
-    [handleAddLot],
+  const handleNavigateBack = useCallback(() => {
+    if (navigationStack.length > 0) {
+      dispatch(navigateBackTo(navigationStack.length - 1));
+    }
+  }, [dispatch, navigationStack.length]);
+
+  const handleNavigateHome = useCallback(() => {
+    dispatch(navigateBackTo(0));
+  }, [dispatch]);
+
+  const handleWheelSegmentClick = useCallback(
+    (item: WheelItem) => {
+      const slot = currentLevelSlots.find((s) => s.id === item.id.toString());
+      if (slot?.isMultiLayer && slot.children && slot.children.length > 0) {
+        handleNavigateInto(slot);
+      }
+    },
+    [currentLevelSlots, handleNavigateInto],
   );
 
   const title = (
-    <Group>
+    <Group gap='xs'>
+      {isInsideMatryoshka && (
+        <>
+          <Tooltip label={t('wheel.navigation.home', 'Home')}>
+            <ActionIcon variant='subtle' size='lg' onClick={handleNavigateHome}>
+              <IconHome size={20} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label={t('wheel.navigation.back', 'Back')}>
+            <ActionIcon variant='subtle' size='lg' onClick={handleNavigateBack}>
+              <IconArrowLeft size={20} />
+            </ActionIcon>
+          </Tooltip>
+        </>
+      )}
       <Title order={1}>{t('wheel.wheel')}</Title>
-      <SlotsPresetInput buttonTitle={t('wheel.importToWheel')} onChange={setCustomWheelItems} />
       <Badge variant='light' size='lg'>
         #{currentRound}
       </Badge>
@@ -233,35 +277,32 @@ const WheelPage: FC = () => {
       title={title}
     >
       {isInsideMatryoshka && (
-        <MatryoshkaBreadcrumb stack={navigationStack} onNavigate={handleBreadcrumbNavigate} />
+        <MatryoshkaNavigation stack={navigationStack} onNavigate={handleBreadcrumbNavigate} />
       )}
 
-      {soleMatryoshka && (
-        <Group justify='center' mt='md'>
-          <Button
-            size='lg'
-            leftSection={<IconArrowRight size={20} />}
-            onClick={() => handleNavigateInto(soleMatryoshka)}
-            variant='filled'
-            color='violet'
-          >
-            Enter «{soleMatryoshka.name || 'Matryoshka'}»
-          </Button>
-        </Group>
-      )}
-
-      {!isLoadingSettings && isInitialized && !soleMatryoshka && (
-        <RandomWheel
-          initialSettings={initialSettings?.data}
-          items={wheelItems}
-          deleteItem={deleteItem}
-          wheelRef={wheelController}
-          onWheelItemsChanged={setParticipants}
-          onSettingsChanged={handleSettingsChanged}
-          form={wheelForm}
-          onWin={handleWin}
-          addButton={addButton}
-        />
+      {!isLoadingSettings && isInitialized && (
+        <div className={styles.wheelLayout}>
+          <VariantsPanel
+            slots={slots}
+            wheelItems={wheelItems}
+            onAdd={handleAddVariant}
+            onDelete={handleDeleteVariant}
+            onUpdate={handleUpdateVariant}
+            importButton={importButton}
+          />
+          <RandomWheel
+            initialSettings={initialSettings?.data}
+            items={wheelItems}
+            deleteItem={deleteItem}
+            wheelRef={wheelController}
+            onWheelItemsChanged={setParticipants}
+            onSettingsChanged={handleSettingsChanged}
+            form={wheelForm}
+            onWin={handleWin}
+            onSegmentClick={handleWheelSegmentClick}
+            elements={{ preview: false }}
+          />
+        </div>
       )}
 
       {winnerSlot && (

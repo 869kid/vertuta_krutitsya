@@ -5,3 +5,16 @@
   overflow: visible;
   padding-bottom: 0;
 }
+
+.wheelLayout {
+  display: flex;
+  gap: 24px;
+  flex-grow: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.wheelLayout :global(.wheel-content) {
+  flex: 1 1 auto;
+  min-width: 0;
+}

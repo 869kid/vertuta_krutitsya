@@ -39,10 +39,10 @@ export const parseLotsImportFile = async (file: File): Promise<ArchivedLot[]> =>
   }
 };
 
-const slotToWheel = ({ id, name, amount, isFavorite }: Slot, excludeColors: string[] = []): WheelItem => ({
+const slotToWheel = ({ id, name, isFavorite }: Slot, excludeColors: string[] = []): WheelItem => ({
   id: id.toString(),
   name: name || '',
-  amount: Number(amount),
+  amount: 1,
   color: getWheelColor(excludeColors),
   isFavorite: isFavorite ?? false
 });

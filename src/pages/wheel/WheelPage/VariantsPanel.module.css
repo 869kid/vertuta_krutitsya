@@ -1,0 +1,60 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  max-width: 340px;
+  height: 100%;
+  flex-shrink: 0;
+  padding-right: 16px;
+}
+
+.scrollArea {
+  flex: 1 1 auto;
+}
+
+.variantItem {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background-color: var(--mantine-color-dark-6);
+  position: relative;
+}
+
+.variantItem + .variantItem {
+  margin-top: 2px;
+}
+
+.colorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.variantName {
+  flex: 1;
+  min-width: 0;
+}
+
+.deleteButton {
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.deleteButton:hover {
+  opacity: 1;
+}
+
+.ownerInput {
+  max-width: 100px;
+}
+
+.addChildButton {
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+}
+
+.addChildButton:hover {
+  background-color: var(--mantine-color-dark-5);
+}
