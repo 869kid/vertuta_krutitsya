@@ -23,11 +23,15 @@ interface SlotLike {
 }
 
 export const getSlotFromSeed = (slots: SlotLike[], distance: number): number => {
-  let restAmount = distance * getTotalSize(slots);
+  if (slots.length === 0) return -1;
+
+  const total = getTotalSize(slots);
+  if (total === 0) return Math.min(Math.floor(distance * slots.length), slots.length - 1);
+
+  let restAmount = distance * total;
 
   const index = slots.findIndex(({ amount }) => {
     restAmount -= Number(amount ?? 0);
-
     return restAmount <= 0;
   });
 
@@ -121,8 +125,13 @@ class PredictionService {
 
   normalizeSlotsChances = (slots: Slot[]): SlotChance[] => {
     const total = getTotalSize(slots);
+    const equalChance = slots.length > 0 ? 100 / slots.length : 0;
     return slots
-      .map<SlotChance>(({ amount, name, id }) => ({ id, chance: (Number(amount) / total) * 100, name: name || '' }))
+      .map<SlotChance>(({ amount, name, id }) => ({
+        id,
+        chance: total === 0 ? equalChance : (Number(amount) / total) * 100,
+        name: name || '',
+      }))
       .sort(({ chance: a }, { chance: b }) => b - a);
   };
 

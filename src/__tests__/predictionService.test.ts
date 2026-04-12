@@ -37,15 +37,15 @@ describe('PredictionService', () => {
       expect(getSlotFromSeed([{ amount: 100 }], 0.5)).toBe(0);
     });
 
-    it('returns -1 for empty slots (known bug)', () => {
+    it('returns -1 for empty slots', () => {
       expect(getSlotFromSeed([], 0.5)).toBe(-1);
     });
 
-    it('returns index 0 when all amounts are 0 (seed*0=0, first slot satisfies <=0)', () => {
+    it('uses uniform distribution when all amounts are 0', () => {
       const slots = [{ amount: 0 }, { amount: 0 }];
-      // restAmount = 0.5 * 0 = 0; first slot: 0 - 0 = 0 <= 0 -> index 0
-      // This means the "winner" is always the first slot regardless of seed -- degenerate but not -1
-      expect(getSlotFromSeed(slots, 0.5)).toBe(0);
+      expect(getSlotFromSeed(slots, 0.25)).toBe(Math.min(Math.floor(0.25 * slots.length), slots.length - 1));
+      expect(getSlotFromSeed(slots, 0.75)).toBe(Math.min(Math.floor(0.75 * slots.length), slots.length - 1));
+      expect(getSlotFromSeed(slots, 1.0)).toBe(slots.length - 1);
     });
 
     it('returns -1 for seed=1 with amounts (boundary: restAmount never reaches <=0 due to float)', () => {
@@ -113,11 +113,12 @@ describe('PredictionService', () => {
       expect(chances[1].id).toBe('a');
     });
 
-    it('produces NaN chances when totalSize is 0', () => {
-      const slots = [makeSlot({ id: 'a', amount: 0 })];
+    it('assigns equal chances when totalSize is 0', () => {
+      const slots = [makeSlot({ id: 'a', amount: 0 }), makeSlot({ id: 'b', amount: 0 })];
       const service = new PredictionService(slots);
       const chances = service.normalizeSlotsChances(slots);
-      expect(chances[0].chance).toBeNaN();
+      expect(chances[0].chance).toBeCloseTo(100 / slots.length);
+      expect(chances[1].chance).toBeCloseTo(100 / slots.length);
     });
   });
 });

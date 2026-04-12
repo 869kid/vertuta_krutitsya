@@ -70,6 +70,13 @@ describe('Slots reducer', () => {
       store.dispatch(setSlotAmount({ id: 'a', amount: 50 }));
       expect(store.getState().slots.slots[0].amount).toBe(50);
     });
+
+    it('does nothing when slot id does not exist', () => {
+      const store = createStore([makeSlot({ id: 'a', amount: 10 })]);
+      store.dispatch(setSlotAmount({ id: 'nonexistent', amount: 99 }));
+      expect(store.getState().slots.slots).toHaveLength(1);
+      expect(store.getState().slots.slots[0].amount).toBe(10);
+    });
   });
 
   describe('addSlotAmount', () => {

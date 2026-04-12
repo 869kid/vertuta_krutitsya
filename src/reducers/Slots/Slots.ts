@@ -66,6 +66,7 @@ const updateSlotPosition = (slots: Slot[], index: number): void => {
 
 const updateSlotAmount = (slots: Slot[], updatedId: string | number, transform: (slot: Slot) => Slot): void => {
   const updatedIndex = slots.findIndex(({ id }) => updatedId === id);
+  if (updatedIndex === -1) return;
 
   slots[updatedIndex] = transform(slots[updatedIndex]);
   updateSlotPosition(slots, updatedIndex);

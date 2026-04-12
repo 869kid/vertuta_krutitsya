@@ -92,7 +92,7 @@ describe('jsonParser', () => {
     it('parses plain array of objects', () => {
       const json = JSON.stringify([{ name: 'A', amount: 5 }]);
       const result = parseJSON(json);
-      expect(result).toEqual([{ name: 'A', amount: 5 }]);
+      expect(result).toEqual([{ name: 'A', amount: 5, investors: [] }]);
     });
 
     it('parses array of strings into lots with amount 1', () => {
@@ -128,14 +128,31 @@ describe('jsonParser', () => {
     it('handles whitespace around JSON', () => {
       const json = `  ${JSON.stringify({ lots: [{ name: 'A' }] })}  `;
       const result = parseJSON(json);
-      expect(result).toHaveLength(1);
+      expect(result).toEqual([{ name: 'A', amount: 1, investors: [] }]);
     });
 
-    it('passes non-string objects through without validation (known limitation)', () => {
+    it('filters out garbage objects without a name field', () => {
       const json = JSON.stringify([{ garbage: true, notALot: 123 }]);
       const result = parseJSON(json);
-      expect(result).toHaveLength(1);
-      expect((result![0] as any).garbage).toBe(true);
+      expect(result).toEqual([]);
+    });
+
+    it('defaults amount to 1 when missing', () => {
+      const json = JSON.stringify([{ name: 'Sword' }]);
+      const result = parseJSON(json);
+      expect(result).toEqual([{ name: 'Sword', amount: 1, investors: [] }]);
+    });
+
+    it('preserves valid name and amount', () => {
+      const json = JSON.stringify([{ name: 'Shield', amount: 42 }]);
+      const result = parseJSON(json);
+      expect(result).toEqual([{ name: 'Shield', amount: 42, investors: [] }]);
+    });
+
+    it('filters out empty strings', () => {
+      const json = JSON.stringify(['Valid', '', '  ']);
+      const result = parseJSON(json);
+      expect(result).toEqual([{ name: 'Valid', amount: 1, investors: [] }]);
     });
   });
 });

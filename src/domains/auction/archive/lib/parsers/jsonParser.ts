@@ -24,11 +24,21 @@ export function parseJSON(text: string): ArchivedLot[] | null {
       return null;
     }
 
-    return items.map((item) =>
-      typeof item === 'string'
-        ? ({ name: item, amount: 1, investors: [] } as ArchivedLot)
-        : (item as ArchivedLot),
-    );
+    return items
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item.trim() ? ({ name: item.trim(), amount: 1, investors: [] } as ArchivedLot) : null;
+        }
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+        const obj = item as Record<string, unknown>;
+        const name = typeof obj.name === 'string' ? obj.name.trim() : '';
+        if (!name) return null;
+        const rawAmount = Number(obj.amount);
+        const amount = !isNaN(rawAmount) && rawAmount > 0 ? rawAmount : 1;
+        const investors = Array.isArray(obj.investors) ? (obj.investors as string[]) : [];
+        return { name, amount, investors } as ArchivedLot;
+      })
+      .filter((item): item is ArchivedLot => item !== null);
   } catch {
     return null;
   }
