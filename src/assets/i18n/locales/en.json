@@ -796,6 +796,8 @@
     "spicyFinal": "Spicy Final",
     "spin": "Spin",
     "spinning": "Spinning...",
+    "hideSettings": "Hide settings",
+    "showSettings": "Show settings",
     "randomnessSource": {
       "label": "Random Generation Method",
       "localBasic": "Standard",

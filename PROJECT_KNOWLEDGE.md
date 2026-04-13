@@ -13,6 +13,15 @@ Wheel segments are always equal size — `amount` field on `WheelItem`/`Slot` is
 ### VariantsPanel replaces ItemsPreview (2026-04-12)
 The left-side panel is now `VariantsPanel` + `VariantItem` (both in `src/pages/wheel/WheelPage/`). It works directly with `Slot[]` from Redux and renders a recursive tree for matryoshka nesting. The old `ItemsPreview` is still in the codebase but disabled via `elements={{ preview: false }}` on `RandomWheel`. Each variant row shows: color dot, name, delete button, owner field, matryoshka checkbox. Child items render recursively with `+ Добавить` per level.
 
+### Ghost add-card replaces Button+TextInput in VariantsPanel (2026-04-13)
+The "add variant" UI is now a ghost card (`.addCard` in `VariantsPanel.module.css`) at the top of the scroll list instead of a separate Button + TextInput above it. The card matches `VariantItem` shape but uses `dark-7` background. It contains: an unstyled `TextInput`, an `ActionIcon` with `variant='outline'` that fills on hover (`.addCardButton` class), plus `AuthorSelect` and Matryoshka checkbox. On submit, `onAdd(name, isMultiLayer, undefined, owner)` is called with pre-filled values, then all fields reset. Files: `src/pages/wheel/WheelPage/VariantsPanel.tsx`, `VariantsPanel.module.css`.
+
+### Collapsible wheel settings panel (2026-04-13)
+`WheelSettings.tsx` (`src/domains/winner-selection/wheel-of-random/settings/ui/Form/WheelSettings.tsx`) has a gear icon (`IconSettings`, `size='xl' radius='md' variant='outline'` — matching the soundtrack button style) in the top controls row. It toggles a Mantine `<Collapse>` around all settings below (Wheel Style, format, dividing, randomness source, CoreImageField). Default state is **collapsed** (`useDisclosure(false)`). The `SimpleGrid` wrapper was removed since `CoreImageField` moved inside the Collapse. The `direction` prop on `WheelSettingsProps` is still in the interface but no longer destructured or used — it can be removed from callers too.
+
+### Controls row vertical alignment with variant cards (2026-04-13)
+`.wheel-controls` in `src/domains/winner-selection/wheel-of-random/ui/FullWheelUI/index.module.css` has `padding-top: 30px` to align the Spin/Duration row with the top of the variant cards on the left (accounting for the "Варианты" title height).
+
 ## Data & Formats
 
 ### Slot model extended with `owner` (2026-04-12)

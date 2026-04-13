@@ -141,6 +141,7 @@
   flex-direction: column;
   overflow: visible;
   height: 100%;
+  padding-top: 30px;
 }
 
 :global(.wheel-content .wheel-controls .upload-wheel-image) {

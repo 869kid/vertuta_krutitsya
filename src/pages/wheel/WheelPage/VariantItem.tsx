@@ -15,7 +15,7 @@ interface VariantItemProps {
   childColors?: Map<string, string>;
   onDelete: (id: string) => void;
   onUpdate: (id: string, changes: Partial<Slot>) => void;
-  onAddChild: (parentId: string) => void;
+  onAddChild: (parentId: string, defaultOwner?: string) => void;
 }
 
 const VariantItem: FC<VariantItemProps> = ({
@@ -147,7 +147,7 @@ const VariantItem: FC<VariantItemProps> = ({
           ))}
           <UnstyledButton
             className={styles.addChildButton}
-            onClick={() => onAddChild(slot.id)}
+            onClick={() => onAddChild(slot.id, slot.owner)}
             style={{ marginLeft: (depth + 1) * 20 }}
           >
             <Text size='xs' c='violet'>+ {t('wheel.addItem', 'Добавить')}</Text>

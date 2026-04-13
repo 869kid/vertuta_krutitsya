@@ -1,5 +1,6 @@
-import { Alert, Anchor, Button, Group, rem, SimpleGrid, Stack } from '@mantine/core';
-import { IconInfoCircle } from '@tabler/icons-react';
+import { ActionIcon, Alert, Anchor, Button, Collapse, Group, rem, Stack, Tooltip } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconInfoCircle, IconSettings } from '@tabler/icons-react';
 import { CSSProperties, ReactNode } from 'react';
 import { useFormContext, useFormState, useWatch } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
@@ -39,7 +40,6 @@ interface WheelSettingsProps {
 const WheelSettings = (props: WheelSettingsProps) => {
   const {
     isLoadingSeed,
-    direction = 'column',
     controls,
     children,
     renderSubmitButton,
@@ -57,6 +57,7 @@ const WheelSettings = (props: WheelSettingsProps) => {
     'wheelNewDropoutFairnessInfoDismissed',
     false,
   );
+  const [isSettingsOpen, { toggle: toggleSettings }] = useDisclosure(false);
 
   const submitButton = (
     <Button loading={isLoadingSeed || isCreatingTicket} disabled={isSubmitting} variant='contained' type='submit'>
@@ -78,15 +79,20 @@ const WheelSettings = (props: WheelSettingsProps) => {
           />
         }
       />
-      <SimpleGrid cols={direction === 'row' ? 2 : 1} spacing='md' style={{ minHeight: 0 }}>
-        <Stack gap='sm' mih={0}>
-          <Group align='center' gap='xs'>
-            {renderSubmitButton ? renderSubmitButton(submitButton) : submitButton}
-            <div className='flex-1 flex-shrink-0'>
-              <SpinTimeComposed disabled={isSubmitting} />
-            </div>
-            <WheelSoundtrackField />
-          </Group>
+      <Stack gap='sm' mih={0}>
+        <Group align='center' gap='xs'>
+          {renderSubmitButton ? renderSubmitButton(submitButton) : submitButton}
+          <div className='flex-1 flex-shrink-0'>
+            <SpinTimeComposed disabled={isSubmitting} />
+          </div>
+          <WheelSoundtrackField />
+          <Tooltip label={t(isSettingsOpen ? 'wheel.hideSettings' : 'wheel.showSettings')}>
+            <ActionIcon size='xl' radius='md' variant='outline' onClick={toggleSettings}>
+              <IconSettings size={28} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+        <Collapse in={isSettingsOpen} transitionDuration={250}>
           <Stack gap='sm' style={{ overflowY: 'auto', overflowX: 'hidden' }}>
             <WheelStyleSelect />
             <Stack gap='xxs'>
@@ -128,23 +134,10 @@ const WheelSettings = (props: WheelSettingsProps) => {
                 ticketError={ticketError}
               />
             )}
-            {/*{elements.randomPace && (*/}
-            {/*  <>*/}
-            {/*    <div className='wheel-controls-row'>*/}
-            {/*      <Typography>{t('wheel.spicyFinal')}</Typography>*/}
-            {/*      <Switch onChange={handleIsRandomPaceChange} />*/}
-            {/*    </div>*/}
-            {/*    {isRandomPace && (*/}
-            {/*      <PaceSettings paceConfig={paceConfig} setPaceConfig={setPaceConfig} spinTime={spinTime} />*/}
-            {/*    )}*/}
-            {/*  </>*/}
-            {/*)}*/}
+            <CoreImageField />
           </Stack>
-        </Stack>
-        <div style={{ display: 'flex', minHeight: 0, flexDirection: 'column' }}>
-          <CoreImageField />
-        </div>
-      </SimpleGrid>
+        </Collapse>
+      </Stack>
     </>
   );
 };

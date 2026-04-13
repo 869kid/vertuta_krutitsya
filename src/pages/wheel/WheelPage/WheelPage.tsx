@@ -115,12 +115,13 @@ const WheelPage: FC = () => {
   );
 
   const handleAddVariant = useCallback(
-    (name: string, isMultiLayer: boolean, parentId?: string) => {
+    (name: string, isMultiLayer: boolean, parentId?: string, owner?: string) => {
       const newSlot = createSlot({
         name,
         amount: 1,
         isMultiLayer,
         children: isMultiLayer ? [] : undefined,
+        owner: owner || undefined,
       });
 
       if (parentId) {
@@ -132,6 +133,7 @@ const WheelPage: FC = () => {
           amount: 1,
           isMultiLayer,
           children: isMultiLayer ? [] : undefined,
+          owner: owner || undefined,
         }));
       }
     },

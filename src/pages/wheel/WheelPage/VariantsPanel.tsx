@@ -1,10 +1,11 @@
-import { Button, Group, ScrollArea, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
+import { ActionIcon, Checkbox, Group, ScrollArea, Stack, Text, TextInput } from '@mantine/core';
 import { IconPlus } from '@tabler/icons-react';
 import { FC, ReactNode, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Slot } from '@models/slot.model';
 import { WheelItem } from '@models/wheel.model';
+import AuthorSelect from '@shared/ui/AuthorSelect/AuthorSelect';
 
 import VariantItem from './VariantItem';
 import styles from './VariantsPanel.module.css';
@@ -12,7 +13,7 @@ import styles from './VariantsPanel.module.css';
 interface VariantsPanelProps {
   slots: Slot[];
   wheelItems: WheelItem[];
-  onAdd: (name: string, isMultiLayer: boolean, parentId?: string) => void;
+  onAdd: (name: string, isMultiLayer: boolean, parentId?: string, owner?: string) => void;
   onDelete: (id: string) => void;
   onUpdate: (id: string, changes: Partial<Slot>) => void;
   importButton?: ReactNode;
@@ -28,6 +29,8 @@ const VariantsPanel: FC<VariantsPanelProps> = ({
 }) => {
   const { t } = useTranslation();
   const [newName, setNewName] = useState('');
+  const [newOwner, setNewOwner] = useState('');
+  const [newIsMultiLayer, setNewIsMultiLayer] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const colorMap = useMemo(() => {
@@ -52,15 +55,17 @@ const VariantsPanel: FC<VariantsPanelProps> = ({
   const handleAddTopLevel = useCallback(() => {
     const trimmed = newName.trim();
     if (!trimmed) return;
-    onAdd(trimmed, false);
+    onAdd(trimmed, newIsMultiLayer, undefined, newOwner || undefined);
     setNewName('');
+    setNewOwner('');
+    setNewIsMultiLayer(false);
     inputRef.current?.focus();
-  }, [newName, onAdd]);
+  }, [newName, newOwner, newIsMultiLayer, onAdd]);
 
   const handleAddChild = useCallback(
-    (parentId: string) => {
+    (parentId: string, defaultOwner?: string) => {
       const name = t('wheel.newItem', 'New item');
-      onAdd(name, false, parentId);
+      onAdd(name, false, parentId, defaultOwner);
     },
     [onAdd, t],
   );
@@ -81,31 +86,46 @@ const VariantsPanel: FC<VariantsPanelProps> = ({
         {t('wheel.variants', 'Варианты')}
       </Text>
 
-      <Group gap='xs' mb='sm'>
-        {importButton}
-        <Button
-          leftSection={<IconPlus size={16} />}
-          variant='filled'
-          size='xs'
-          onClick={handleAddTopLevel}
-          disabled={!newName.trim()}
-        >
-          {t('wheel.addItem', 'Добавить')}
-        </Button>
-      </Group>
-
-      <TextInput
-        ref={inputRef}
-        value={newName}
-        onChange={(e) => setNewName(e.currentTarget.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={t('wheel.lotNamePlaceholder', 'Variant name...')}
-        size='sm'
-        mb='sm'
-      />
-
       <ScrollArea className={styles.scrollArea} offsetScrollbars>
         <Stack gap={8}>
+          <div className={styles.addCard}>
+            <Group gap={8} wrap='nowrap' align='center'>
+              <TextInput
+                ref={inputRef}
+                value={newName}
+                onChange={(e) => setNewName(e.currentTarget.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={t('wheel.lotNamePlaceholder', 'Variant name...')}
+                size='xs'
+                variant='unstyled'
+                className={styles.addCardInput}
+              />
+              <ActionIcon
+                variant='outline'
+                size='sm'
+                color={newName.trim() ? 'primary' : 'dimmed'}
+                disabled={!newName.trim()}
+                onClick={handleAddTopLevel}
+                className={styles.addCardButton}
+              >
+                <IconPlus size={16} />
+              </ActionIcon>
+            </Group>
+            <Group gap={8} mt={4} wrap='nowrap' align='center'>
+              <AuthorSelect
+                value={newOwner}
+                onChange={setNewOwner}
+                size='xs'
+                className={styles.ownerInput}
+              />
+              <Checkbox
+                checked={newIsMultiLayer}
+                onChange={(e) => setNewIsMultiLayer(e.currentTarget.checked)}
+                label={t('wheel.matryoshkaShort', 'Матрёшка')}
+                size='xs'
+              />
+            </Group>
+          </div>
           {slots.map((slot) => (
             <VariantItem
               key={slot.id}
@@ -119,6 +139,8 @@ const VariantsPanel: FC<VariantsPanelProps> = ({
           ))}
         </Stack>
       </ScrollArea>
+
+      {importButton}
     </div>
   );
 };
