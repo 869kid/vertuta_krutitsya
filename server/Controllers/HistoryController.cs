@@ -16,12 +16,15 @@ public class HistoryController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<WinRecordResponse>>> GetAll(
         [FromQuery] string? sessionId,
+        [FromQuery] string? roomCode,
         [FromQuery] int limit = 100,
         [FromQuery] int offset = 0)
     {
         var query = _db.WinRecords.AsQueryable();
 
-        if (!string.IsNullOrEmpty(sessionId))
+        if (!string.IsNullOrEmpty(roomCode))
+            query = query.Where(w => w.RoomCode == roomCode);
+        else if (!string.IsNullOrEmpty(sessionId))
             query = query.Where(w => w.SessionId == sessionId);
 
         var records = await query

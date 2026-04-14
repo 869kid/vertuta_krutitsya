@@ -75,9 +75,10 @@ export const historyApi = {
     }
   },
 
-  async getHistory(sessionId?: string): Promise<WinRecordDto[]> {
+  async getHistory(sessionId?: string, roomCode?: string): Promise<WinRecordDto[]> {
     const params: Record<string, string> = {};
-    if (sessionId) params.sessionId = sessionId;
+    if (roomCode) params.roomCode = roomCode;
+    else if (sessionId) params.sessionId = sessionId;
     const { data } = await api.get<WinRecordDto[]>('/api/history', { params });
     return data;
   },

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { historyApi, WinRecordDto } from '@api/historyApi';
-import { roomRestApi, wheelHubApi, type WinRecordDto as RoomWinRecordDto } from '@api/wheelHubApi';
+import { wheelHubApi, type WinRecordDto as HubWinRecordDto } from '@api/wheelHubApi';
 import { RootState } from '@reducers';
 import { clearHistory } from '@reducers/Matryoshka/Matryoshka';
 
@@ -28,14 +28,12 @@ const HistoryPanel = ({ opened, onClose }: HistoryPanelProps) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const localHistory = useSelector((state: RootState) => state.matryoshka.history);
-  const roomCode = useSelector((state: RootState) => state.room.roomCode);
   const [serverRecords, setServerRecords] = useState<WinRecordDto[]>([]);
   const [loadingServer, setLoadingServer] = useState(false);
   const [showServer, setShowServer] = useState(false);
 
   useEffect(() => {
-    if (!roomCode) return;
-    const unsub = wheelHubApi.on('onWinRecorded', (record: RoomWinRecordDto) => {
+    const unsub = wheelHubApi.on('onWinRecorded', (record: HubWinRecordDto) => {
       setServerRecords((prev) => [
         {
           id: record.id,
@@ -50,40 +48,26 @@ const HistoryPanel = ({ opened, onClose }: HistoryPanelProps) => {
       ]);
     });
     return unsub;
-  }, [roomCode]);
+  }, []);
 
   const loadServerHistory = useCallback(async () => {
     setLoadingServer(true);
     try {
-      if (roomCode) {
-        const records = await roomRestApi.getRoomHistory(roomCode);
-        setServerRecords(records.map((r) => ({
-          id: r.id,
-          lotName: r.lotName,
-          owner: r.owner,
-          round: r.round,
-          path: r.path,
-          timestamp: r.timestamp,
-          sessionId: r.sessionId,
-        })));
-        setShowServer(true);
-      } else {
-        const records = await historyApi.getHistory();
-        setServerRecords(records);
-        setShowServer(true);
-      }
+      const records = await historyApi.getHistory('', 'DEFAULT');
+      setServerRecords(records);
+      setShowServer(true);
     } catch {
       setShowServer(false);
     } finally {
       setLoadingServer(false);
     }
-  }, [roomCode]);
+  }, []);
 
   useEffect(() => {
-    if (opened && (showServer || roomCode)) {
+    if (opened) {
       loadServerHistory();
     }
-  }, [opened, roomCode]);
+  }, [opened, loadServerHistory]);
 
   const handleClearHistory = async () => {
     dispatch(clearHistory());
@@ -144,11 +128,6 @@ const HistoryPanel = ({ opened, onClose }: HistoryPanelProps) => {
           >
             {showServer ? t('wheel.serverHistory', 'Server') : t('wheel.loadFromServer', 'Load from server')}
           </Button>
-          {!showServer && (
-            <Button variant='light' size='xs' onClick={() => setShowServer(false)}>
-              {t('wheel.localHistory', 'Local')}
-            </Button>
-          )}
           {displayRecords.length > 0 && (
             <Button
               variant='subtle'

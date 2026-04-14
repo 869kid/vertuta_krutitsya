@@ -16,7 +16,6 @@ interface VariantItemProps {
   onDelete: (id: string) => void;
   onUpdate: (id: string, changes: Partial<Slot>) => void;
   onAddChild: (parentId: string, defaultOwner?: string) => void;
-  isReadOnly?: boolean;
 }
 
 const VariantItem: FC<VariantItemProps> = ({
@@ -27,7 +26,6 @@ const VariantItem: FC<VariantItemProps> = ({
   onDelete,
   onUpdate,
   onAddChild,
-  isReadOnly = false,
 }) => {
   const { t } = useTranslation();
 
@@ -102,17 +100,15 @@ const VariantItem: FC<VariantItemProps> = ({
             </Text>
           </UnstyledButton>
         )}
-        {!isReadOnly && (
-          <ActionIcon
-            variant='subtle'
-            size='xs'
-            color='dimmed'
-            onClick={() => onDelete(slot.id)}
-            className={styles.deleteButton}
-          >
-            <IconX size={14} />
-          </ActionIcon>
-        )}
+        <ActionIcon
+          variant='subtle'
+          size='xs'
+          color='dimmed'
+          onClick={() => onDelete(slot.id)}
+          className={styles.deleteButton}
+        >
+          <IconX size={14} />
+        </ActionIcon>
       </Group>
 
       <Group gap={8} mt={4} wrap='nowrap' align='center'>
@@ -147,7 +143,6 @@ const VariantItem: FC<VariantItemProps> = ({
               onDelete={onDelete}
               onUpdate={onUpdate}
               onAddChild={onAddChild}
-              isReadOnly={isReadOnly}
             />
           ))}
           <UnstyledButton

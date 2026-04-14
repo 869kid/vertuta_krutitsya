@@ -215,6 +215,9 @@ Three bash scripts in `scripts/` for one-command self-hosting:
 ### Deterministic wheel sync in room mode: no-shuffle + server seed (2026-04-14)
 In room mode, `FullWheelUI`'s `shuffle()` is disabled (`shouldShuffle={false}` passed from `WheelPage.tsx` when `roomCode` is truthy) so all clients display segments in the same order (sorted by name via `filteredItems`). Additionally, the server generates a random `seed` (double [0,1)) in `WheelHub.RequestSpin` and broadcasts it in `SpinStartedResponse`. Clients use this seed in `distanceToItem()` (`geometry.ts`) instead of `Math.random()` to compute an identical stop position within the winning segment. Together these ensure all clients render the same wheel layout and animate to the exact same final rotation. Files changed: `server/Models/Dtos.cs` (added `Seed` to `SpinStartedResponse`), `server/Hubs/WheelHub.cs` (seed generation), `src/api/wheelHubApi.ts` (`seed` in `SpinStartedDto`), `src/domains/winner-selection/wheel-of-random/lib/geometry.ts` (optional `seed` param on `distanceToItem`/`calculateWinnerSpinDistance`), `BaseWheel.tsx` (`seed` in `SpinParams`), `FullWheelUI/index.tsx` (`triggerServerSpin` accepts seed), `WheelPage.tsx` (passes seed + `shouldShuffle={false}`).
 
+### Multi-room removed — single permanent room, no host/viewer (2026-04-14)
+Multi-room functionality replaced with a single hardcoded `DEFAULT` room. All clients auto-join on SignalR connect (`WheelHub.OnConnectedAsync` ensures the room row exists, adds to group, sends current variants). No host/viewer distinction — everyone can add, delete, and spin. Removed: `RoomController.cs`, `RoomPanel.tsx`, `roomRestApi` in `wheelHubApi.ts`, BCrypt dependency (`VertutaServer.csproj`), `isReadOnly` prop from `VariantsPanel`/`VariantItem`, `wheel.room.*` i18n keys. Simplified: `Room` Redux slice to `{ isConnected, connectionError }`, hub DTOs stripped of `RoomCode` field. `WheelPage.tsx` auto-connects in a `useEffect` on mount and always routes through `wheelHubApi` — no local Redux/IndexedDB fallback. `HistoryPanel` always fetches from `GET /api/history?roomCode=DEFAULT` (new query param added to `HistoryController.GetAll`). This supersedes earlier entries about roomCode guard patterns, host-only double guards, and host in-memory tracking.
+
 ### historyApi.ts had same `||` fallback bug as wheelHubApi (2026-04-14)
 `src/api/historyApi.ts` line 3 had `import.meta.env.VITE_HISTORY_API_URL || 'http://localhost:8080'` — empty string from Docker build fell through to localhost, breaking API calls through ngrok/nginx proxy. Fixed to `|| ''` so relative `/api/*` paths route through nginx. Same root cause as the `wheelHubApi.ts` fix documented above.
 
@@ -222,6 +225,24 @@ In room mode, `FullWheelUI`'s `shuffle()` is disabled (`shouldShuffle={false}` p
 
 ### StatsController EF Core LINQ translation failure (2026-04-14)
 `server/Controllers/StatsController.cs` — `GroupBy().OrderByDescending(g => g.Count()).Take().ToDictionaryAsync(g => g.Key, g => g.Count())` cannot be translated to SQL by Npgsql/EF Core. The `g.Count()` inside `ToDictionaryAsync` value selector is the problem. Fix: project to anonymous type via `.Select(g => new { g.Key, Count = g.Count() })` first, then `.ToListAsync()`, then in-memory `.ToDictionary()`. This pattern applies to any EF Core `GroupBy` + aggregate + `ToDictionary` chain.
+
+### WheelPage auto-connects to SignalR on mount (2026-04-14)
+`WheelPage.tsx` has a `useEffect([], ...)` that calls `wheelHubApi.connect()` and registers all listeners (`onConnected`, `onVariantAdded`, `onVariantUpdated`, `onVariantRemoved`, `onSpinStarted`, `onError`). Cleanup disconnects and removes all listeners. All variant/spin operations go through hub methods — there is no local-only code path. The `serverVariantsRef` (flat `VariantDto[]`) is maintained by listener callbacks and used for `clientId → variantId` lookups when calling `removeVariant`, `updateVariant`, `confirmRound`. `shouldShuffle={false}` is always set on `RandomWheel`.
+
+### ~~Room mode is opt-in via roomCode guard pattern~~ SUPERSEDED (2026-04-14)
+Replaced by single permanent room. There is no `roomCode` state or guard anymore. See "Multi-room removed" entry above.
+
+### ~~Host-only actions need double guard: roomCode + isHost~~ SUPERSEDED (2026-04-14)
+No host/viewer distinction exists. Everyone can spin and delete.
+
+### ~~Host tracking is in-memory, lost on server restart~~ SUPERSEDED (2026-04-14)
+Host tracking removed entirely. No `RoomHosts` dictionary in `WheelHub.cs`.
+
+### ~~wheelHubApi listeners accumulate if not cleaned up~~ RESOLVED (2026-04-14)
+`WheelPage.tsx` now registers all listeners in a single `useEffect` and cleans up via `wheelHubApi.removeAllListeners()` + `wheelHubApi.disconnect()` in the return. No more listener leak on unmount.
+
+### ~~Room cleanup / TTL not implemented~~ REDUCED SCOPE (2026-04-14)
+Only one room (`DEFAULT`) exists now. Variants still accumulate if not consumed by spins, but room proliferation is no longer an issue.
 
 ### UpdateVariant hub method — room-mode variant editing (2026-04-14)
 `handleUpdateVariant` in `WheelPage.tsx` was local-only (Redux `updateLotInTree` + `setSlots`). In room mode, renaming a child variant or toggling matryoshka would revert on the next `onVariantAdded`/`onVariantRemoved` event because the tree is rebuilt from `currentVariants` (server data). Fix: added `UpdateVariant` method to `server/Hubs/WheelHub.cs` (updates `Name`, `Owner`, `IsMultiLayer` in DB, broadcasts `VariantUpdated` to room group), `updateVariant()` to `src/api/wheelHubApi.ts`, `onVariantUpdated` listener registration in `RoomPanel.tsx`, and `handleUpdateVariant` now calls `wheelHubApi.updateVariant()` when `roomCode` is set. DTO: `UpdateVariantRequest` in `server/Models/Dtos.cs` — all fields except `RoomCode`/`VariantId` are nullable (partial update).

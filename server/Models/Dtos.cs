@@ -46,27 +46,7 @@ public record StatsResponse(
     Dictionary<string, int> TopLots
 );
 
-// Room DTOs
-
-public record CreateRoomDto(string HostName, string? Password);
-
-public record RoomResponse(
-    string RoomCode,
-    string HostName,
-    bool HasPassword,
-    int VariantCount,
-    DateTime CreatedAt
-);
-
 // Variant DTOs
-
-public record CreateVariantDto(
-    string ClientId,
-    string Name,
-    string? Owner,
-    bool IsMultiLayer,
-    int? ParentVariantId
-);
 
 public record VariantResponse(
     int Id,
@@ -82,7 +62,6 @@ public record VariantResponse(
 // Hub DTOs
 
 public record AddVariantRequest(
-    string RoomCode,
     string ClientId,
     string Name,
     string? Owner,
@@ -91,26 +70,16 @@ public record AddVariantRequest(
 );
 
 public record UpdateVariantRequest(
-    string RoomCode,
     int VariantId,
     string? Name,
     string? Owner,
     bool? IsMultiLayer
 );
 
-public record RemoveVariantRequest(string RoomCode, int VariantId);
+public record RemoveVariantRequest(int VariantId);
 
-public record RecordWinRequest(
-    string RoomCode,
-    string LotName,
-    string Owner,
-    int Round,
-    string[] Path,
-    int VariantId
-);
-
-public record RequestSpinRequest(string RoomCode, double Duration, int? ParentVariantId);
+public record RequestSpinRequest(double Duration, int? ParentVariantId);
 
 public record SpinStartedResponse(string WinnerClientId, int WinnerId, string WinnerName, double Duration, double Seed);
 
-public record ConfirmRoundRequest(string RoomCode, int VariantId, string LotName, string Owner, int Round, string[] Path);
+public record ConfirmRoundRequest(int VariantId, string LotName, string Owner, int Round, string[] Path);

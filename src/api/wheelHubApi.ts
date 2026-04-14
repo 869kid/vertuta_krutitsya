@@ -13,10 +13,7 @@ export interface VariantDto {
   createdAt: string;
 }
 
-export interface JoinedRoomPayload {
-  roomCode: string;
-  hostName: string;
-  isHost: boolean;
+export interface ConnectedPayload {
   variants: VariantDto[];
 }
 
@@ -38,20 +35,12 @@ export interface SpinStartedDto {
   seed: number;
 }
 
-export interface RoomInfoDto {
-  roomCode: string;
-  hostName: string;
-  hasPassword: boolean;
-  variantCount: number;
-  createdAt: string;
-}
-
 type EventCallback<T> = (data: T) => void;
 
 let connection: signalR.HubConnection | null = null;
 
 const listeners: {
-  onJoinedRoom: EventCallback<JoinedRoomPayload>[];
+  onConnected: EventCallback<ConnectedPayload>[];
   onVariantAdded: EventCallback<VariantDto>[];
   onVariantUpdated: EventCallback<VariantDto>[];
   onVariantRemoved: EventCallback<number>[];
@@ -59,7 +48,7 @@ const listeners: {
   onSpinStarted: EventCallback<SpinStartedDto>[];
   onError: EventCallback<string>[];
 } = {
-  onJoinedRoom: [],
+  onConnected: [],
   onVariantAdded: [],
   onVariantUpdated: [],
   onVariantRemoved: [],
@@ -76,8 +65,8 @@ const buildConnection = () =>
     .build();
 
 const registerHandlers = (conn: signalR.HubConnection) => {
-  conn.on('JoinedRoom', (data: JoinedRoomPayload) =>
-    listeners.onJoinedRoom.forEach((cb) => cb(data)),
+  conn.on('JoinedRoom', (data: ConnectedPayload) =>
+    listeners.onConnected.forEach((cb) => cb(data)),
   );
   conn.on('VariantAdded', (data: VariantDto) =>
     listeners.onVariantAdded.forEach((cb) => cb(data)),
@@ -114,18 +103,7 @@ export const wheelHubApi = {
     connection = null;
   },
 
-  async joinRoom(roomCode: string, password?: string): Promise<void> {
-    if (!connection) await this.connect();
-    await connection!.invoke('JoinRoom', roomCode, password ?? null);
-  },
-
-  async leaveRoom(roomCode: string): Promise<void> {
-    if (!connection) return;
-    await connection.invoke('LeaveRoom', roomCode);
-  },
-
   async addVariant(request: {
-    roomCode: string;
     clientId: string;
     name: string;
     owner?: string;
@@ -134,7 +112,6 @@ export const wheelHubApi = {
   }): Promise<void> {
     if (!connection) return;
     await connection.invoke('AddVariant', {
-      roomCode: request.roomCode,
       clientId: request.clientId,
       name: request.name,
       owner: request.owner ?? null,
@@ -144,7 +121,6 @@ export const wheelHubApi = {
   },
 
   async updateVariant(request: {
-    roomCode: string;
     variantId: number;
     name?: string;
     owner?: string;
@@ -152,7 +128,6 @@ export const wheelHubApi = {
   }): Promise<void> {
     if (!connection) return;
     await connection.invoke('UpdateVariant', {
-      roomCode: request.roomCode,
       variantId: request.variantId,
       name: request.name ?? null,
       owner: request.owner ?? null,
@@ -160,34 +135,20 @@ export const wheelHubApi = {
     });
   },
 
-  async removeVariant(roomCode: string, variantId: number): Promise<void> {
+  async removeVariant(variantId: number): Promise<void> {
     if (!connection) return;
-    await connection.invoke('RemoveVariant', { roomCode, variantId });
+    await connection.invoke('RemoveVariant', { variantId });
   },
 
-  async recordWin(request: {
-    roomCode: string;
-    lotName: string;
-    owner: string;
-    round: number;
-    path: string[];
-    variantId: number;
-  }): Promise<void> {
-    if (!connection) return;
-    await connection.invoke('RecordWin', request);
-  },
-
-  async requestSpin(roomCode: string, duration: number, parentVariantId?: number | null): Promise<void> {
+  async requestSpin(duration: number, parentVariantId?: number | null): Promise<void> {
     if (!connection) return;
     await connection.invoke('RequestSpin', {
-      roomCode,
       duration,
       parentVariantId: parentVariantId ?? null,
     });
   },
 
   async confirmRound(request: {
-    roomCode: string;
     variantId: number;
     lotName: string;
     owner: string;
@@ -211,7 +172,7 @@ export const wheelHubApi = {
   },
 
   removeAllListeners(): void {
-    listeners.onJoinedRoom = [];
+    listeners.onConnected = [];
     listeners.onVariantAdded = [];
     listeners.onVariantUpdated = [];
     listeners.onVariantRemoved = [];
@@ -222,29 +183,5 @@ export const wheelHubApi = {
 
   isConnected(): boolean {
     return connection?.state === signalR.HubConnectionState.Connected;
-  },
-};
-
-export const roomRestApi = {
-  async createRoom(hostName: string, password?: string): Promise<RoomInfoDto> {
-    const res = await fetch(`${API_BASE}/api/room`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hostName, password: password || null }),
-    });
-    if (!res.ok) throw new Error(`Failed to create room: ${res.status}`);
-    return res.json();
-  },
-
-  async getRoom(roomCode: string): Promise<RoomInfoDto> {
-    const res = await fetch(`${API_BASE}/api/room/${roomCode}`);
-    if (!res.ok) throw new Error(`Room not found: ${res.status}`);
-    return res.json();
-  },
-
-  async getRoomHistory(roomCode: string): Promise<WinRecordDto[]> {
-    const res = await fetch(`${API_BASE}/api/room/${roomCode}/history`);
-    if (!res.ok) throw new Error(`Failed to fetch history: ${res.status}`);
-    return res.json();
   },
 };
