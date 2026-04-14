@@ -127,10 +127,23 @@ const WheelPage: FC = () => {
 
   const handleUpdateVariant = useCallback(
     (id: string, changes: Partial<Slot>) => {
+      if (roomCode) {
+        const variantId = findVariantIdByClientId(serverVariantsRef.current, id);
+        if (variantId != null) {
+          wheelHubApi.updateVariant({
+            roomCode,
+            variantId,
+            name: changes.name ?? undefined,
+            owner: changes.owner ?? undefined,
+            isMultiLayer: changes.isMultiLayer ?? undefined,
+          });
+        }
+        return;
+      }
       const updatedSlots = updateLotInTree(slots, id, changes);
       dispatch(setSlots(updatedSlots));
     },
-    [slots, dispatch],
+    [slots, dispatch, roomCode],
   );
 
   const handleAddVariant = useCallback(
@@ -196,7 +209,7 @@ const WheelPage: FC = () => {
 
   const handleSpinStarted = useCallback(
     (data: SpinStartedDto) => {
-      wheelController.current?.triggerServerSpin(data.winnerClientId, data.duration);
+      wheelController.current?.triggerServerSpin(data.winnerClientId, data.duration, data.seed);
     },
     [],
   );
@@ -379,6 +392,7 @@ const WheelPage: FC = () => {
             onRequestSpin={roomCode ? handleRequestSpin : undefined}
             onSegmentClick={handleWheelSegmentClick}
             elements={{ preview: false }}
+            shouldShuffle={!roomCode}
           />
         </div>
       )}

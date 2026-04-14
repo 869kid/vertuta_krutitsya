@@ -54,6 +54,13 @@ const RoomPanel: FC<RoomPanelProps> = ({ serverVariants, onServerVariantsChange,
         dispatch(setSlots(variantsToSlots(currentVariants)));
       });
 
+      wheelHubApi.on('onVariantUpdated', (updated) => {
+        const idx = currentVariants.findIndex((v) => v.id === updated.id);
+        if (idx >= 0) currentVariants[idx] = updated;
+        onServerVariantsChange([...currentVariants]);
+        dispatch(setSlots(variantsToSlots(currentVariants)));
+      });
+
       wheelHubApi.on('onVariantRemoved', (id) => {
         const idx = currentVariants.findIndex((v) => v.id === id);
         if (idx >= 0) currentVariants.splice(idx, 1);

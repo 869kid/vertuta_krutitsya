@@ -32,9 +32,10 @@ export const calculateRandomSpinDistance = ({ duration, seed }: CalculateRandomS
  * Get the distance to the item based on the id
  * @param id - The id of the item
  * @param items - The items to search in
+ * @param seed - Optional deterministic seed [0,1) to replace Math.random()
  * @returns angle in degrees
  */
-export const distanceToItem = (id: Key, items: WheelItemWithAngle[]): number => {
+export const distanceToItem = (id: Key, items: WheelItemWithAngle[], seed?: number): number => {
   const target = items.find(({ id: itemId }) => itemId === id);
 
   if (!target) {
@@ -44,7 +45,9 @@ export const distanceToItem = (id: Key, items: WheelItemWithAngle[]): number => 
   const { startAngle, endAngle } = target;
 
   const fullCircle = Math.PI * 2;
-  const x = getRandomInclusive(startAngle / fullCircle, endAngle / fullCircle);
+  const min = startAngle / fullCircle;
+  const max = endAngle / fullCircle;
+  const x = seed != null ? min + seed * (max - min) : getRandomInclusive(min, max);
   return (1 - x) * 360 + 270;
 };
 
@@ -52,6 +55,7 @@ interface CalculateWinnerSpinDistanceParams {
   duration?: number | null;
   winnerId: Key;
   items: WheelItemWithAngle[];
+  seed?: number;
 }
 
 /**
@@ -59,14 +63,16 @@ interface CalculateWinnerSpinDistanceParams {
  * @param duration - The duration of the spin
  * @param winnerId - The id of the winner
  * @param items - The items to search in
+ * @param seed - Optional deterministic seed [0,1) for consistent position across clients
  * @returns angle in degrees
  */
 export const calculateWinnerSpinDistance = ({
   duration,
   winnerId,
   items,
+  seed,
 }: CalculateWinnerSpinDistanceParams): number => {
-  const localSpin = distanceToItem(winnerId, items);
+  const localSpin = distanceToItem(winnerId, items, seed);
   return Math.round(calculateFixedAngle(duration ?? 0) / 360) * 360 + localSpin;
 };
 

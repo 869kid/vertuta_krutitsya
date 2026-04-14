@@ -41,6 +41,7 @@ export interface SpinParams {
   distance?: number;
   paceConfig?: RandomPaceConfig;
   winnerId: ID;
+  seed?: number;
 }
 
 export interface SpinResult {
@@ -247,14 +248,14 @@ const BaseWheel = <T extends WheelItem>(props: BaseWheelProps<T>) => {
   const { animate, getCurrentRotation } = useWheelAnimator({ wheelCanvas, onSpin: onSpinTick });
 
   const spin: WheelController['spin'] = useCallback(
-    ({ winnerId, duration, distance }: SpinParams): SpinResult => {
+    ({ winnerId, duration, distance, seed }: SpinParams): SpinResult => {
       setWinnerItem(undefined);
 
       effectsManager.current?.setSpeedMultiplier(5);
 
       const initialDistance = getCurrentRotation();
       const spinDistance =
-        distance ?? calculateWinnerSpinDistance({ duration, winnerId, items: normalizedRef.current });
+        distance ?? calculateWinnerSpinDistance({ duration, winnerId, items: normalizedRef.current, seed });
       const distanceOffset = initialDistance % 360;
 
       const changedDistance = spinDistance - distanceOffset;

@@ -20,18 +20,22 @@ public class StatsController : ControllerBase
         var totalWins = await _db.WinRecords.CountAsync();
         var totalRounds = await _db.Sessions.SumAsync(s => s.TotalRounds);
 
-        var topWinners = await _db.WinRecords
+        var topWinners = (await _db.WinRecords
             .Where(w => w.Owner != "")
             .GroupBy(w => w.Owner)
-            .OrderByDescending(g => g.Count())
+            .Select(g => new { g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
             .Take(10)
-            .ToDictionaryAsync(g => g.Key, g => g.Count());
+            .ToListAsync())
+            .ToDictionary(x => x.Key, x => x.Count);
 
-        var topLots = await _db.WinRecords
+        var topLots = (await _db.WinRecords
             .GroupBy(w => w.LotName)
-            .OrderByDescending(g => g.Count())
+            .Select(g => new { g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
             .Take(10)
-            .ToDictionaryAsync(g => g.Key, g => g.Count());
+            .ToListAsync())
+            .ToDictionary(x => x.Key, x => x.Count);
 
         return Ok(new StatsResponse(totalSessions, totalWins, totalRounds, topWinners, topLots));
     }

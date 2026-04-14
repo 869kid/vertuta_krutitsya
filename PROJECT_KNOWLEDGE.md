@@ -118,6 +118,9 @@ Internal helper `updateSlotAmount` in `src/reducers/Slots/Slots.ts` calls `slots
 ### wheelHubApi listeners accumulate if not cleaned up (2026-04-14)
 `RoomPanel.tsx` registers `onJoinedRoom`, `onVariantAdded`, `onVariantRemoved`, `onError` listeners in `handleCreate`/`handleJoin`. These are cleaned up via `wheelHubApi.removeAllListeners()` on leave, but if the component unmounts without calling leave (e.g. navigation away), listeners leak. Consider adding a cleanup `useEffect` return.
 
+### FullWheelUI shuffle breaks multi-client sync (2026-04-14)
+`FullWheelUI` (`src/domains/winner-selection/wheel-of-random/ui/FullWheelUI/index.tsx`) shuffles wheel items with `Math.random()` via `useMemo(() => shuffle(items), [items, shouldShuffle])`. Each browser tab produces a unique segment order. In room mode this caused the wheel to visually stop on the wrong variant even though the winner ID was correct — `calculateWinnerSpinDistance` targeted the right angle for the local layout, but any timing desync between `normalizedRef` and the drawn canvas during React re-renders would shift the result to a neighboring segment. Fix: pass `shouldShuffle={false}` from `WheelPage` when `roomCode` is set. Also `distanceToItem` in `geometry.ts` uses `getRandomInclusive()` to pick a random position within the winning segment — in room mode the server-provided `seed` replaces this randomness. Both `shouldShuffle` and `seed` are only relevant for room mode; local mode is unaffected.
+
 ### JSON parser passes garbage objects through without validation (2026-04-13)
 `parseJSON` in `src/domains/auction/archive/lib/parsers/jsonParser.ts` casts non-string array items directly to `ArchivedLot` without checking they have `name`/`amount` fields. Malformed JSON like `[{"garbage": true}]` will produce invalid lot objects that may cause crashes later in the pipeline.
 
@@ -145,10 +148,19 @@ There is no protection against the host clicking Spin while an animation is alre
 ### .env.example documents all environment variables (2026-04-14)
 Root `.env.example` documents Vite build-time vars (`VITE_HISTORY_API_URL`, `VITE_DONATEX_CLIENT_ID`), Docker Compose vars (`POSTGRES_*`), and .NET server vars (`AllowedOrigins__0`, `ConnectionStrings__DefaultConnection`). Useful for onboarding and production deploys.
 
+### Self-hosting scripts: setup, smoke-test, teardown (2026-04-14)
+`scripts/setup.sh` — one-command Linux setup: checks Docker 24+ & Compose v2, copies `.env.example` → `.env`, runs `docker compose up --build -d`, polls until all services healthy (up to 120s), runs smoke tests, prints URLs. Idempotent.
+`scripts/smoke-test.sh` — 8 checks: 3 containers running, frontend HTTP 200 + HTML, API `/health` 200, nginx `/api/` proxy (not 502/503), WebSocket `/hubs/wheel` reachable, PostgreSQL `pg_isready`. Prints pass/fail summary, exits 0 or 1.
+`scripts/teardown.sh` — `docker compose down` (preserves volumes); `--clean` flag adds `-v` to delete DB data.
+All scripts use `#!/usr/bin/env bash`, `set -euo pipefail`, colored output, and auto-`cd` to project root via `BASH_SOURCE`. LF line endings enforced (created on Windows).
+
 ## Known Issues & Gotchas
 
 ### API_BASE used `||` instead of `??` — broke Docker builds (2026-04-14)
 `src/api/wheelHubApi.ts` line 3: `VITE_HISTORY_API_URL || 'http://localhost:8080'` treated empty string (set intentionally for Docker/nginx proxy builds) as falsy, falling back to localhost. Fixed by switching to `??` (nullish coalescing). Empty string = relative URLs for nginx proxy; undefined = localhost for dev; explicit URL = that URL.
+
+### nginx:alpine has wget but NOT curl (2026-04-14)
+The `nginx:alpine` Docker image includes `wget` but not `curl`. Any in-container HTTP check (healthcheck, smoke test from inside the container) must use `wget --spider -q <url>` instead of `curl -f`. This affects `docker-compose.yml` frontend healthcheck and any future scripts that exec into the frontend container.
 
 ### Vite proxy pointed to wrong port and wrong WebSocket path (2026-04-14)
 `vite.config.ts` proxy section had `http://localhost:8000` (wrong port, backend is 8080) and `/socket.io` (Socket.IO path, but app uses SignalR at `/hubs/*`). Fixed to proxy `/api` and `/hubs` (with `ws: true`) to `http://localhost:8080`. In dev mode the SignalR client builds a full URL so it bypasses the proxy, but `/api` proxy is used by REST calls with relative paths and `/hubs` proxy serves as a fallback.
@@ -173,5 +185,43 @@ On Windows with PowerShell shell, `$(cat <<'EOF' ... EOF)` fails with parse erro
 ### DEPLOYMENT.md comprehensive deployment guide (2026-04-14)
 `DEPLOYMENT.md` in project root — covers local dev (backend via Docker Compose + frontend via Vite), full Docker stack (all 3 services), production CI/CD (GitHub Actions for production and staging), required GitHub Secrets (8 total: SSH_*, VITE_*_PRODUCTION, VITE_*_STAGING), server-side nginx example config, manual backend deployment steps, environment variable reference (Vite build-time, .NET runtime, Docker Compose), architecture diagrams (Mermaid), and troubleshooting section (CORS, WebSocket, SSG, DB, port conflicts). Cross-checked against all config files on 2026-04-14. Known limitation: the .NET backend is not deployed via CI — it's manual (Docker or direct dotnet publish).
 
+### entry-server.tsx created for SSG prerender (2026-04-14)
+`src/entry-server.tsx` was missing — referenced by `build:ssg` script (`package.json`) and consumed by `scripts/prerender.js` but never existed in the repo. Created with minimal SSR setup: `createMemoryRouter` (not `createBrowserRouter`), bare `MantineBaseProvider` (no Redux-dependent theme), fresh `QueryClient`, i18n init via `i18nInitPromise`, and `getHeadData()` that reads metadata from i18n translations. Exports `render(route)` returning `{ html, head }`.
+
+### Microsoft.AspNetCore.OpenApi conflicts with Swashbuckle (2026-04-14)
+`Microsoft.AspNetCore.OpenApi 9.0.13` pulls in `Microsoft.OpenApi 2.x` which removed types like `IOpenApiAny`, `OpenApiSchema`, etc. that `Swashbuckle.AspNetCore 10.1.7` (or its transitive deps) still reference. Server crashes at startup with `ReflectionTypeLoadException`. Fix: removed `Microsoft.AspNetCore.OpenApi` from `server/VertutaServer.csproj` — Swashbuckle provides its own OpenAPI support. `AddEndpointsApiExplorer()` in `Program.cs` still works (it's a framework method, not package-dependent).
+
+### Dockerfile syntax directive requires network access (2026-04-14)
+`# syntax=docker/dockerfile:1.7` at top of root `Dockerfile` forces Docker BuildKit to pull the frontend image from `registry-1.docker.io`. Fails in offline/DNS-restricted environments with "no such host". Removed — default BuildKit (bundled with Docker Desktop) handles all features used in the Dockerfile.
+
+### tsconfig target/lib bumped to ES2022 (2026-04-14)
+`tsconfig.json` had `"target": "ES2020"` / `"lib": ["ES2020", ...]`. The `.at()` array method (used in `matryoshka.utils.test.ts`, `wheelHelpers.test.ts`, `VariantItem.tsx`) requires ES2022. Build fails with `TS2550: Property 'at' does not exist`. Fixed by changing both `target` and `lib` to `ES2022`.
+
+### slot.name is nullable — guard with ?? '' (2026-04-14)
+`Slot.name` in `src/models/slot.model.ts` can be `null`. In `VariantItem.tsx`, `useState(slot.name)` creates `string | null` state, causing TS errors on `.trim()` and `<TextInput value={...}>`. All usages of `slot.name` as initial/reset value need `?? ''` fallback. Same pattern applies anywhere `Slot` fields are used as form state.
+
+### Self-Hosting section added to DEPLOYMENT.md (2026-04-14)
+New section between "Full Docker Stack" and "Production Deployment (CI/CD)". Covers: system requirements (Linux, Docker 24+, 2 GB RAM, 5 GB disk), quick start via `scripts/setup.sh` (3 commands), helper scripts table, `.env` configuration (especially `POSTGRES_PASSWORD`), port customization with CORS reminder, reverse proxy examples for both Caddy (3-line auto-HTTPS) and nginx (with WebSocket upgrade headers for SignalR), update procedure (`git pull` + rebuild, auto-migrations), database backup/restore via `pg_dump`/`psql` through `docker compose exec`, and uninstall instructions using `scripts/teardown.sh --clean`.
+
+### Self-hosting helper scripts (2026-04-14)
+Three bash scripts in `scripts/` for one-command self-hosting:
+- `scripts/setup.sh` — checks Docker ≥ 24 and Compose v2, creates `.env` from `.env.example` if missing, runs `docker compose up --build -d`, waits up to 120 s for all services to become healthy, then calls `smoke-test.sh`. Exits non-zero on any failure.
+- `scripts/smoke-test.sh` — verifies all 3 containers are running, frontend returns 200 with HTML, API `/health` returns 200, nginx proxies `/api/` correctly, WebSocket upgrade on `/hubs/wheel` works, and PostgreSQL responds to `pg_isready`. Prints pass/fail summary.
+- `scripts/teardown.sh` — stops containers via `docker compose down`. With `--clean` flag also removes volumes (deletes database data).
+
 ### Frontend healthcheck added to docker-compose.yml (2026-04-14)
 `docker-compose.yml` frontend service now has a healthcheck: `wget --spider -q http://localhost:80` (interval 5s, timeout 5s, retries 3). Uses `wget` because `nginx:alpine` ships with wget but not curl. All three services (db, server, frontend) now have healthchecks, enabling `setup.sh` to poll for full-stack readiness.
+
+### Deterministic wheel sync in room mode: no-shuffle + server seed (2026-04-14)
+In room mode, `FullWheelUI`'s `shuffle()` is disabled (`shouldShuffle={false}` passed from `WheelPage.tsx` when `roomCode` is truthy) so all clients display segments in the same order (sorted by name via `filteredItems`). Additionally, the server generates a random `seed` (double [0,1)) in `WheelHub.RequestSpin` and broadcasts it in `SpinStartedResponse`. Clients use this seed in `distanceToItem()` (`geometry.ts`) instead of `Math.random()` to compute an identical stop position within the winning segment. Together these ensure all clients render the same wheel layout and animate to the exact same final rotation. Files changed: `server/Models/Dtos.cs` (added `Seed` to `SpinStartedResponse`), `server/Hubs/WheelHub.cs` (seed generation), `src/api/wheelHubApi.ts` (`seed` in `SpinStartedDto`), `src/domains/winner-selection/wheel-of-random/lib/geometry.ts` (optional `seed` param on `distanceToItem`/`calculateWinnerSpinDistance`), `BaseWheel.tsx` (`seed` in `SpinParams`), `FullWheelUI/index.tsx` (`triggerServerSpin` accepts seed), `WheelPage.tsx` (passes seed + `shouldShuffle={false}`).
+
+### historyApi.ts had same `||` fallback bug as wheelHubApi (2026-04-14)
+`src/api/historyApi.ts` line 3 had `import.meta.env.VITE_HISTORY_API_URL || 'http://localhost:8080'` — empty string from Docker build fell through to localhost, breaking API calls through ngrok/nginx proxy. Fixed to `|| ''` so relative `/api/*` paths route through nginx. Same root cause as the `wheelHubApi.ts` fix documented above.
+
+## Known Issues & Gotchas
+
+### StatsController EF Core LINQ translation failure (2026-04-14)
+`server/Controllers/StatsController.cs` — `GroupBy().OrderByDescending(g => g.Count()).Take().ToDictionaryAsync(g => g.Key, g => g.Count())` cannot be translated to SQL by Npgsql/EF Core. The `g.Count()` inside `ToDictionaryAsync` value selector is the problem. Fix: project to anonymous type via `.Select(g => new { g.Key, Count = g.Count() })` first, then `.ToListAsync()`, then in-memory `.ToDictionary()`. This pattern applies to any EF Core `GroupBy` + aggregate + `ToDictionary` chain.
+
+### UpdateVariant hub method — room-mode variant editing (2026-04-14)
+`handleUpdateVariant` in `WheelPage.tsx` was local-only (Redux `updateLotInTree` + `setSlots`). In room mode, renaming a child variant or toggling matryoshka would revert on the next `onVariantAdded`/`onVariantRemoved` event because the tree is rebuilt from `currentVariants` (server data). Fix: added `UpdateVariant` method to `server/Hubs/WheelHub.cs` (updates `Name`, `Owner`, `IsMultiLayer` in DB, broadcasts `VariantUpdated` to room group), `updateVariant()` to `src/api/wheelHubApi.ts`, `onVariantUpdated` listener registration in `RoomPanel.tsx`, and `handleUpdateVariant` now calls `wheelHubApi.updateVariant()` when `roomCode` is set. DTO: `UpdateVariantRequest` in `server/Models/Dtos.cs` — all fields except `RoomCode`/`VariantId` are nullable (partial update).

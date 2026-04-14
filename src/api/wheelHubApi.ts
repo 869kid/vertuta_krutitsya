@@ -35,6 +35,7 @@ export interface SpinStartedDto {
   winnerId: number;
   winnerName: string;
   duration: number;
+  seed: number;
 }
 
 export interface RoomInfoDto {
@@ -52,6 +53,7 @@ let connection: signalR.HubConnection | null = null;
 const listeners: {
   onJoinedRoom: EventCallback<JoinedRoomPayload>[];
   onVariantAdded: EventCallback<VariantDto>[];
+  onVariantUpdated: EventCallback<VariantDto>[];
   onVariantRemoved: EventCallback<number>[];
   onWinRecorded: EventCallback<WinRecordDto>[];
   onSpinStarted: EventCallback<SpinStartedDto>[];
@@ -59,6 +61,7 @@ const listeners: {
 } = {
   onJoinedRoom: [],
   onVariantAdded: [],
+  onVariantUpdated: [],
   onVariantRemoved: [],
   onWinRecorded: [],
   onSpinStarted: [],
@@ -78,6 +81,9 @@ const registerHandlers = (conn: signalR.HubConnection) => {
   );
   conn.on('VariantAdded', (data: VariantDto) =>
     listeners.onVariantAdded.forEach((cb) => cb(data)),
+  );
+  conn.on('VariantUpdated', (data: VariantDto) =>
+    listeners.onVariantUpdated.forEach((cb) => cb(data)),
   );
   conn.on('VariantRemoved', (id: number) =>
     listeners.onVariantRemoved.forEach((cb) => cb(id)),
@@ -137,6 +143,23 @@ export const wheelHubApi = {
     });
   },
 
+  async updateVariant(request: {
+    roomCode: string;
+    variantId: number;
+    name?: string;
+    owner?: string;
+    isMultiLayer?: boolean;
+  }): Promise<void> {
+    if (!connection) return;
+    await connection.invoke('UpdateVariant', {
+      roomCode: request.roomCode,
+      variantId: request.variantId,
+      name: request.name ?? null,
+      owner: request.owner ?? null,
+      isMultiLayer: request.isMultiLayer ?? null,
+    });
+  },
+
   async removeVariant(roomCode: string, variantId: number): Promise<void> {
     if (!connection) return;
     await connection.invoke('RemoveVariant', { roomCode, variantId });
@@ -190,6 +213,7 @@ export const wheelHubApi = {
   removeAllListeners(): void {
     listeners.onJoinedRoom = [];
     listeners.onVariantAdded = [];
+    listeners.onVariantUpdated = [];
     listeners.onVariantRemoved = [];
     listeners.onWinRecorded = [];
     listeners.onSpinStarted = [];

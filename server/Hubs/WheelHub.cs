@@ -99,6 +99,31 @@ public class WheelHub : Hub
         await Clients.Group($"room_{request.RoomCode}").SendAsync("VariantAdded", response);
     }
 
+    public async Task UpdateVariant(UpdateVariantRequest request)
+    {
+        var variant = await _db.Variants
+            .FirstOrDefaultAsync(v => v.Id == request.VariantId && v.RoomCode == request.RoomCode);
+
+        if (variant == null)
+        {
+            await Clients.Caller.SendAsync("Error", "Variant not found");
+            return;
+        }
+
+        if (request.Name != null) variant.Name = request.Name;
+        if (request.Owner != null) variant.Owner = request.Owner == "" ? null : request.Owner;
+        if (request.IsMultiLayer.HasValue) variant.IsMultiLayer = request.IsMultiLayer.Value;
+
+        await _db.SaveChangesAsync();
+
+        var response = new VariantResponse(
+            variant.Id, variant.ClientId, variant.Name, variant.Owner,
+            variant.IsMultiLayer, variant.ParentId, variant.SortOrder, variant.CreatedAt
+        );
+
+        await Clients.Group($"room_{request.RoomCode}").SendAsync("VariantUpdated", response);
+    }
+
     public async Task RemoveVariant(RemoveVariantRequest request)
     {
         if (!IsHost(request.RoomCode))
@@ -184,10 +209,11 @@ public class WheelHub : Hub
 
         var index = RandomNumberGenerator.GetInt32(variants.Count);
         var winner = variants[index];
+        var seed = RandomNumberGenerator.GetInt32(1_000_000) / 1_000_000.0;
 
         await Clients.Group($"room_{request.RoomCode}")
             .SendAsync("SpinStarted", new SpinStartedResponse(
-                winner.ClientId, winner.Id, winner.Name, request.Duration));
+                winner.ClientId, winner.Id, winner.Name, request.Duration, seed));
     }
 
     public async Task ConfirmRound(ConfirmRoundRequest request)

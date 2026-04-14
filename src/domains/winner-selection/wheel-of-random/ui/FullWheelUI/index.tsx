@@ -90,7 +90,7 @@ interface RandomWheelProps<TWheelItem extends WheelItem = WheelItem> {
 export interface RandomWheelController {
   setItems: (items: WheelItem[]) => void;
   spin?: WheelController['spin'];
-  triggerServerSpin: (winnerClientId: string, duration: number) => Promise<void>;
+  triggerServerSpin: (winnerClientId: string, duration: number, seed?: number) => Promise<void>;
 }
 
 interface RandomOrgTicketResponse {
@@ -185,8 +185,8 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
         setItemsFromProps(items);
       },
       spin: wheelController.current ? (params: SpinParams) => wheelController.current!.spin(params) : undefined,
-      triggerServerSpin: async (winnerClientId: string, duration: number) => {
-        const config: SpinParams = { duration, winnerId: winnerClientId };
+      triggerServerSpin: async (winnerClientId: string, duration: number, seed?: number) => {
+        const config: SpinParams = { duration, winnerId: winnerClientId, seed };
         const spinResult = wheelController.current?.spin(config);
 
         if (soundtrackEnabled && soundtrackSource) {

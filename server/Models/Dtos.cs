@@ -90,6 +90,14 @@ public record AddVariantRequest(
     int? ParentVariantId
 );
 
+public record UpdateVariantRequest(
+    string RoomCode,
+    int VariantId,
+    string? Name,
+    string? Owner,
+    bool? IsMultiLayer
+);
+
 public record RemoveVariantRequest(string RoomCode, int VariantId);
 
 public record RecordWinRequest(
@@ -103,6 +111,6 @@ public record RecordWinRequest(
 
 public record RequestSpinRequest(string RoomCode, double Duration, int? ParentVariantId);
 
-public record SpinStartedResponse(string WinnerClientId, int WinnerId, string WinnerName, double Duration);
+public record SpinStartedResponse(string WinnerClientId, int WinnerId, string WinnerName, double Duration, double Seed);
 
 public record ConfirmRoundRequest(string RoomCode, int VariantId, string LotName, string Owner, int Round, string[] Path);
