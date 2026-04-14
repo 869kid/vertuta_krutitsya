@@ -16,7 +16,7 @@ import { FC, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { wheelHubApi, roomRestApi, type VariantDto } from '@api/wheelHubApi';
+import { wheelHubApi, roomRestApi, type VariantDto, type SpinStartedDto } from '@api/wheelHubApi';
 import { RootState } from '@reducers';
 import { joinedRoom, leftRoom, setConnectionError } from '@reducers/Room/Room';
 import { setSlots } from '@reducers/Slots/Slots';
@@ -25,9 +25,10 @@ import { variantsToSlots } from '@utils/roomVariantMapper';
 interface RoomPanelProps {
   serverVariants: VariantDto[];
   onServerVariantsChange: (variants: VariantDto[]) => void;
+  onSpinStarted?: (data: SpinStartedDto) => void;
 }
 
-const RoomPanel: FC<RoomPanelProps> = ({ serverVariants, onServerVariantsChange }) => {
+const RoomPanel: FC<RoomPanelProps> = ({ serverVariants, onServerVariantsChange, onSpinStarted }) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const { roomCode, hostName, isHost, isConnected, connectionError } = useSelector(
@@ -63,8 +64,12 @@ const RoomPanel: FC<RoomPanelProps> = ({ serverVariants, onServerVariantsChange 
       wheelHubApi.on('onError', (msg) => {
         dispatch(setConnectionError(msg));
       });
+
+      if (onSpinStarted) {
+        wheelHubApi.on('onSpinStarted', onSpinStarted);
+      }
     },
-    [dispatch, onServerVariantsChange],
+    [dispatch, onServerVariantsChange, onSpinStarted],
   );
 
   const handleCreate = useCallback(async () => {

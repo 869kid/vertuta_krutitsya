@@ -30,6 +30,13 @@ export interface WinRecordDto {
   sessionId: string;
 }
 
+export interface SpinStartedDto {
+  winnerClientId: string;
+  winnerId: number;
+  winnerName: string;
+  duration: number;
+}
+
 export interface RoomInfoDto {
   roomCode: string;
   hostName: string;
@@ -47,12 +54,14 @@ const listeners: {
   onVariantAdded: EventCallback<VariantDto>[];
   onVariantRemoved: EventCallback<number>[];
   onWinRecorded: EventCallback<WinRecordDto>[];
+  onSpinStarted: EventCallback<SpinStartedDto>[];
   onError: EventCallback<string>[];
 } = {
   onJoinedRoom: [],
   onVariantAdded: [],
   onVariantRemoved: [],
   onWinRecorded: [],
+  onSpinStarted: [],
   onError: [],
 };
 
@@ -75,6 +84,9 @@ const registerHandlers = (conn: signalR.HubConnection) => {
   );
   conn.on('WinRecorded', (data: WinRecordDto) =>
     listeners.onWinRecorded.forEach((cb) => cb(data)),
+  );
+  conn.on('SpinStarted', (data: SpinStartedDto) =>
+    listeners.onSpinStarted.forEach((cb) => cb(data)),
   );
   conn.on('Error', (msg: string) =>
     listeners.onError.forEach((cb) => cb(msg)),
@@ -142,6 +154,27 @@ export const wheelHubApi = {
     await connection.invoke('RecordWin', request);
   },
 
+  async requestSpin(roomCode: string, duration: number, parentVariantId?: number | null): Promise<void> {
+    if (!connection) return;
+    await connection.invoke('RequestSpin', {
+      roomCode,
+      duration,
+      parentVariantId: parentVariantId ?? null,
+    });
+  },
+
+  async confirmRound(request: {
+    roomCode: string;
+    variantId: number;
+    lotName: string;
+    owner: string;
+    round: number;
+    path: string[];
+  }): Promise<void> {
+    if (!connection) return;
+    await connection.invoke('ConfirmRound', request);
+  },
+
   on<K extends keyof typeof listeners>(
     event: K,
     callback: (typeof listeners)[K][number],
@@ -159,6 +192,7 @@ export const wheelHubApi = {
     listeners.onVariantAdded = [];
     listeners.onVariantRemoved = [];
     listeners.onWinRecorded = [];
+    listeners.onSpinStarted = [];
     listeners.onError = [];
   },
 

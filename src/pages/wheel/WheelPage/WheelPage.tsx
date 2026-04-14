@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { historyApi } from '@api/historyApi';
-import { wheelHubApi, type VariantDto } from '@api/wheelHubApi';
+import { wheelHubApi, type VariantDto, type SpinStartedDto } from '@api/wheelHubApi';
 import SlotsPresetInput from '@components/Form/SlotsPresetInput/SlotsPresetInput.tsx';
 import PageContainer from '@components/PageContainer/PageContainer';
 import HistoryPanel from '@domains/winner-selection/history/HistoryPanel';
@@ -72,6 +72,13 @@ const WheelPage: FC = () => {
     () => (isInsideMatryoshka ? getLotsAtPath(slots, navigationStack) : slots),
     [slots, navigationStack, isInsideMatryoshka],
   );
+
+  const currentParentVariantId = useMemo(() => {
+    if (navigationStack.length === 0) return null;
+    const lastNav = navigationStack[navigationStack.length - 1];
+    const variant = serverVariantsRef.current.find((v) => v.clientId === lastNav.slotId);
+    return variant?.id ?? null;
+  }, [navigationStack]);
 
   const wheelItems = useMemo(() => SlotListToWheelList(currentLevelSlots), [currentLevelSlots]);
 
@@ -178,6 +185,22 @@ const WheelPage: FC = () => {
     [currentLevelSlots],
   );
 
+  const handleRequestSpin = useCallback(
+    (duration: number) => {
+      if (roomCode && isHost) {
+        wheelHubApi.requestSpin(roomCode, duration, currentParentVariantId);
+      }
+    },
+    [roomCode, isHost, currentParentVariantId],
+  );
+
+  const handleSpinStarted = useCallback(
+    (data: SpinStartedDto) => {
+      wheelController.current?.triggerServerSpin(data.winnerClientId, data.duration);
+    },
+    [],
+  );
+
   const handleNavigateInto = useCallback(
     (slot: Slot) => {
       dispatch(navigateInto({ slotId: slot.id, slotName: slot.name || '(unnamed)' }));
@@ -204,16 +227,18 @@ const WheelPage: FC = () => {
       dispatch(recordWin({ lot: slot, path: pathNames }));
 
       if (roomCode) {
-        const variantId = findVariantIdByClientId(serverVariantsRef.current, slot.id);
-        if (variantId != null) {
-          wheelHubApi.recordWin({
-            roomCode,
-            lotName: slot.name || '(unnamed)',
-            owner: slot.owner || '',
-            round: currentRound,
-            path: pathNames,
-            variantId,
-          });
+        if (isHost) {
+          const variantId = findVariantIdByClientId(serverVariantsRef.current, slot.id);
+          if (variantId != null) {
+            wheelHubApi.confirmRound({
+              roomCode,
+              lotName: slot.name || '(unnamed)',
+              owner: slot.owner || '',
+              round: currentRound,
+              path: pathNames,
+              variantId,
+            });
+          }
         }
       } else {
         historyApi.recordWin({
@@ -237,7 +262,7 @@ const WheelPage: FC = () => {
       dispatch(nextRound());
       setWinnerSlot(null);
     },
-    [navigationStack, slots, currentLevelSlots, currentRound, dispatch, roomCode],
+    [navigationStack, slots, currentLevelSlots, currentRound, dispatch, roomCode, isHost],
   );
 
   const handleSettingsChanged = useCallback(
@@ -324,6 +349,7 @@ const WheelPage: FC = () => {
       <RoomPanel
         serverVariants={serverVariantsRef.current}
         onServerVariantsChange={handleServerVariantsChange}
+        onSpinStarted={handleSpinStarted}
       />
 
       {isInsideMatryoshka && (
@@ -350,6 +376,7 @@ const WheelPage: FC = () => {
             onSettingsChanged={handleSettingsChanged}
             form={wheelForm}
             onWin={handleWin}
+            onRequestSpin={roomCode ? handleRequestSpin : undefined}
             onSegmentClick={handleWheelSegmentClick}
             elements={{ preview: false }}
           />

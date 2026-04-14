@@ -84,11 +84,13 @@ interface RandomWheelProps<TWheelItem extends WheelItem = WheelItem> {
   onWheelItemsChanged?: (items: TWheelItem[]) => void;
   onSettingsChanged?: (settings: Wheel.Settings) => void;
   onSpinStart?: (params: SpinStartCallbackParams) => void;
+  onRequestSpin?: (duration: number) => void;
 }
 
 export interface RandomWheelController {
   setItems: (items: WheelItem[]) => void;
   spin?: WheelController['spin'];
+  triggerServerSpin: (winnerClientId: string, duration: number) => Promise<void>;
 }
 
 interface RandomOrgTicketResponse {
@@ -112,6 +114,7 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
   onSegmentClick,
   onWheelItemsChanged,
   onSpinStart,
+  onRequestSpin,
   shouldShuffle = true,
   elements: elementsFromProps,
   children,
@@ -182,8 +185,22 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
         setItemsFromProps(items);
       },
       spin: wheelController.current ? (params: SpinParams) => wheelController.current!.spin(params) : undefined,
+      triggerServerSpin: async (winnerClientId: string, duration: number) => {
+        const config: SpinParams = { duration, winnerId: winnerClientId };
+        const spinResult = wheelController.current?.spin(config);
+
+        if (soundtrackEnabled && soundtrackSource) {
+          soundtrackPlayerRef.current?.play(soundtrackOffset ?? 0, soundtrackVolume ?? 0.5);
+        }
+
+        await spinResult?.animate();
+        soundtrackPlayerRef.current?.stop();
+
+        const winnerItem = itemsFromProps.find((item) => item.id === winnerClientId);
+        if (winnerItem) onWin?.(winnerItem as TWheelItem);
+      },
     }),
-    [],
+    [itemsFromProps, onWin, soundtrackEnabled, soundtrackSource, soundtrackOffset, soundtrackVolume],
   );
 
   const randomOrgTicketQuery = useQuery({
@@ -250,6 +267,11 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
     async ({ randomnessSource }: Wheel.Settings) => {
       const { min, max } = randomSpinConfig!;
       const duration = (randomSpinEnabled ? random.getInt(min!, max!) : spinTime) ?? 20;
+
+      if (onRequestSpin) {
+        onRequestSpin(duration);
+        return;
+      }
 
       const generateSeed = async (): Promise<number> => {
         if (randomnessSource === 'random-org') {
@@ -338,6 +360,7 @@ const FullWheelUI = <TWheelItem extends WheelItem = WheelItem>({
       randomSpinConfig,
       randomSpinEnabled,
       spinTime,
+      onRequestSpin,
       wheelStrategy,
       itemsFromProps,
       soundtrackEnabled,
