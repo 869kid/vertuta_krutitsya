@@ -32,11 +32,11 @@ const VariantItem: FC<VariantItemProps> = ({
   const { t } = useTranslation();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(slot.name);
+  const [editValue, setEditValue] = useState(slot.name ?? '');
   const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setEditValue(slot.name);
+    setEditValue(slot.name ?? '');
   }, [slot.name]);
 
   useEffect(() => {
@@ -51,13 +51,13 @@ const VariantItem: FC<VariantItemProps> = ({
     if (trimmed && trimmed !== slot.name) {
       onUpdate(slot.id, { name: trimmed });
     } else {
-      setEditValue(slot.name);
+      setEditValue(slot.name ?? '');
     }
     setIsEditing(false);
   }, [editValue, slot.name, slot.id, onUpdate]);
 
   const cancelRename = useCallback(() => {
-    setEditValue(slot.name);
+    setEditValue(slot.name ?? '');
     setIsEditing(false);
   }, [slot.name]);
 

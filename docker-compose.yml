@@ -39,6 +39,11 @@ services:
     restart: unless-stopped
     depends_on:
       - server
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
 
 volumes:
   pgdata:

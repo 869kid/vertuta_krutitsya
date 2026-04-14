@@ -108,6 +108,145 @@ docker compose up --build
 
 ---
 
+## Self-Hosting
+
+Everything you need to run vertuta_krutitsya on your own server.
+
+### System requirements
+
+| Resource       | Minimum                                     |
+|----------------|---------------------------------------------|
+| OS             | Linux (Ubuntu 20.04+, Debian 11+, or similar) |
+| Docker         | 24+                                         |
+| Docker Compose | v2+ (the `docker compose` plugin)           |
+| RAM            | 2 GB free                                   |
+| Disk           | 5 GB free                                   |
+| Open port      | 3000 (or whichever you map in `docker-compose.yml`) |
+
+### Quick start (3 commands)
+
+```bash
+git clone <repo-url> && cd vertuta_krutitsya
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+```
+
+`setup.sh` will:
+1. Verify Docker and Docker Compose are installed and meet the minimum versions.
+2. Create `.env` from `.env.example` if it doesn't exist.
+3. Run `docker compose up --build -d`.
+4. Wait for all services to become healthy (up to 120 s).
+5. Execute `scripts/smoke-test.sh` — checks containers, HTTP endpoints, nginx proxy, WebSocket, and the database.
+6. Print a summary with service URLs.
+
+After the script finishes, open **http://\<your-server-ip\>:3000**.
+
+### Helper scripts
+
+| Script                     | Purpose                                          |
+|----------------------------|--------------------------------------------------|
+| `scripts/setup.sh`        | Build, start, and verify the full stack           |
+| `scripts/smoke-test.sh`   | Run health checks against a running stack         |
+| `scripts/teardown.sh`     | Stop containers (data preserved)                  |
+| `scripts/teardown.sh --clean` | Stop containers **and** delete the database volume |
+
+### Configuration
+
+Copy `.env.example` to `.env` before running setup (the script does this automatically).
+The only variable you **must** change for production:
+
+```dotenv
+POSTGRES_PASSWORD=<strong-random-password>
+```
+
+See [Environment Variables Reference](#environment-variables-reference) for the full list.
+
+### Changing the port
+
+Edit `docker-compose.yml` — the `frontend` service `ports` line:
+
+```yaml
+ports:
+  - "8080:80"   # expose on port 8080 instead of 3000
+```
+
+If you change the port, also update `AllowedOrigins__0` in the `server` environment so CORS keeps working:
+
+```yaml
+AllowedOrigins__0: "http://localhost:8080"
+```
+
+### Putting it behind a reverse proxy (nginx / Caddy)
+
+If you already have a public-facing web server, proxy to the Docker stack instead of exposing port 3000 directly.
+
+**Caddy** (automatic HTTPS):
+
+```caddyfile
+vertuta.example.com {
+    reverse_proxy localhost:3000
+}
+```
+
+**nginx**:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name vertuta.example.com;
+
+    # SSL managed by certbot
+    ssl_certificate     /etc/letsencrypt/live/vertuta.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/vertuta.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+WebSocket headers (`Upgrade` / `Connection`) are required — SignalR uses them for the `/hubs/wheel` connection.
+
+### Updating
+
+```bash
+cd vertuta_krutitsya
+git pull origin main
+docker compose up --build -d
+```
+
+The .NET API applies pending EF Core migrations automatically on startup, so the database schema stays in sync.
+
+### Backups
+
+Database data lives in the `pgdata` Docker volume. To create a SQL dump:
+
+```bash
+docker compose exec -T db pg_dump -U vertuta vertuta > backup_$(date +%F).sql
+```
+
+To restore:
+
+```bash
+docker compose exec -T db psql -U vertuta vertuta < backup_2025-01-01.sql
+```
+
+### Uninstalling
+
+```bash
+bash scripts/teardown.sh --clean   # stops containers and deletes the database volume
+docker rmi $(docker images -q 'vertuta_krutitsya*')  # remove built images
+```
+
+---
+
 ## Production Deployment (CI/CD)
 
 Production deploys only the **frontend** (static files) via CI. The backend is deployed separately.

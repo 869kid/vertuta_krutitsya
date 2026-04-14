@@ -86,6 +86,9 @@ Previously, if the current level had exactly 1 multi-layer slot with children, t
 ### Room mode is opt-in via roomCode guard pattern (2026-04-14)
 All WheelPage handlers (`handleAddVariant`, `handleDeleteVariant`, `handleNextRound`) check `if (roomCode)` at the top. If truthy — hub call via `wheelHubApi`; if falsy — original local Redux/IndexedDB logic. This ensures backward compatibility. The `isReadOnly` prop (derived from `!!roomCode && !isHost`) is threaded through `VariantsPanel` → `VariantItem` to hide delete buttons for viewers.
 
+### Host-only actions need double guard: roomCode + isHost (2026-04-14)
+`handleRequestSpin` and `handleNextRound` in `WheelPage.tsx` must check `isHost` before sending `requestSpin`/`confirmRound` to the server. Without this, non-host viewers' form submit would trigger a server call that gets rejected with an error. The `onRequestSpin` prop is passed to `RandomWheel` for all room members (so the early-return in `onSpinClick` fires), but the actual `wheelHubApi.requestSpin()` call is gated by `isHost`. Same pattern for `confirmRound` inside `handleNextRound`.
+
 ### Git remotes and default branch (2026-04-13)
 Remotes were reconfigured: `origin` → `https://github.com/869kid/vertuta_krutitsya.git` (push here), `upstream` → `https://github.com/Pointauc/pointauc_frontend.git` (read-only, original fork). Default branch renamed from `master` to `main`. Plain `git push` / `git pull` works against `origin/main`. The rule in `.cursor/rules/project-knowledge.mdc` also documents this.
 
@@ -126,6 +129,9 @@ Fixed: `deploy-production.yml` trigger changed from `master` to `main`. Duplicat
 ### Room cleanup / TTL not implemented (2026-04-14)
 Rooms and their variants persist in PostgreSQL indefinitely. There is no cleanup job or TTL. Old rooms accumulate over time. Consider adding a background service or scheduled task to delete rooms older than N hours.
 
+### No double-spin guard (2026-04-14)
+There is no protection against the host clicking Spin while an animation is already running. `FullWheelUI.onSpinClick` and `triggerServerSpin` do not check whether a spin is in progress. This can cause overlapping GSAP animations and potentially duplicate `ConfirmRound` calls. Consider adding an `isSpinning` flag to `Room` Redux slice or the wheel controller.
+
 ## Architecture Decisions
 
 ### Docker Compose full-stack setup (2026-04-14)
@@ -152,6 +158,12 @@ Root `.env.example` documents Vite build-time vars (`VITE_HISTORY_API_URL`, `VIT
 ### Backend hardened for production (2026-04-14)
 `server/Program.cs` — Swagger/SwaggerUI gated behind `IsDevelopment()` so it's not exposed in production. `ForwardedHeaders` middleware added (XForwardedFor + XForwardedProto) before CORS for correct client IP/scheme behind reverse proxy. Health check endpoint at `/health` registered via `AddHealthChecks()` + `MapHealthChecks("/health")` — no external NuGet needed, uses built-in ASP.NET Core health checks. `server/Dockerfile` — runtime container runs as non-root `appuser` (adduser + USER directive). `server/appsettings.json` — `AllowedOrigins` array added with localhost defaults so the config section is explicit (previously only existed as a fallback in code).
 
+### Server-side winner determination + spin sync (2026-04-14)
+Winner selection moved from client to server for room mode. Flow: host sends `RequestSpin(roomCode, duration, parentVariantId?)` → server picks winner via `RandomNumberGenerator.GetInt32(variants.Count)` in `WheelHub.cs` → broadcasts `SpinStarted(winnerClientId, winnerId, winnerName, duration)` to all clients in room → all clients animate wheel via `triggerServerSpin` on `RandomWheelController` imperative handle (`FullWheelUI/index.tsx`). After animation, host confirms via `ConfirmRound` → server writes `WinRecord` + removes `Variant` → broadcasts `WinRecorded` + `VariantRemoved`. New DTOs: `RequestSpinRequest`, `SpinStartedResponse`, `ConfirmRoundRequest` in `server/Models/Dtos.cs`. Old `RecordWin` hub method kept for backward compat. Non-room (local) mode completely unaffected — `onRequestSpin` prop is `undefined` so `FullWheelUI.onSpinClick` uses existing client-side flow.
+
+### FullWheelUI supports external spin triggering (2026-04-14)
+`RandomWheelController` interface (`src/domains/winner-selection/wheel-of-random/ui/FullWheelUI/index.tsx`) now exposes `triggerServerSpin(winnerClientId: string, duration: number): Promise<void>`. This imperatively runs `BaseWheel.spin()` + soundtrack + `onWin()` callback without going through the form submit / seed generation path. New prop `onRequestSpin?: (duration: number) => void` causes `onSpinClick` to short-circuit: calculate duration from settings, call the callback, return. Both are wired in `WheelPage.tsx` only when `roomCode` is set.
+
 ### .gitignore excludes server build artifacts (2026-04-14)
 `server/bin/` and `server/obj/` were previously tracked in git (no .gitignore rule). Added both to root `.gitignore` and removed from tracking via `git rm -rf --cached`. This eliminated ~130 binary DLL/EXE/cache files from the repo. The `server/.dockerignore` already excluded these for Docker builds, but git itself was storing them.
 
@@ -160,3 +172,6 @@ On Windows with PowerShell shell, `$(cat <<'EOF' ... EOF)` fails with parse erro
 
 ### DEPLOYMENT.md comprehensive deployment guide (2026-04-14)
 `DEPLOYMENT.md` in project root — covers local dev (backend via Docker Compose + frontend via Vite), full Docker stack (all 3 services), production CI/CD (GitHub Actions for production and staging), required GitHub Secrets (8 total: SSH_*, VITE_*_PRODUCTION, VITE_*_STAGING), server-side nginx example config, manual backend deployment steps, environment variable reference (Vite build-time, .NET runtime, Docker Compose), architecture diagrams (Mermaid), and troubleshooting section (CORS, WebSocket, SSG, DB, port conflicts). Cross-checked against all config files on 2026-04-14. Known limitation: the .NET backend is not deployed via CI — it's manual (Docker or direct dotnet publish).
+
+### Frontend healthcheck added to docker-compose.yml (2026-04-14)
+`docker-compose.yml` frontend service now has a healthcheck: `wget --spider -q http://localhost:80` (interval 5s, timeout 5s, retries 3). Uses `wget` because `nginx:alpine` ships with wget but not curl. All three services (db, server, frontend) now have healthchecks, enabling `setup.sh` to poll for full-stack readiness.
