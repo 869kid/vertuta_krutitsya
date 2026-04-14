@@ -31,3 +31,7 @@ docs/.vitepress/dist
 .env.production
 
 nginx/private-nginx.conf
+
+# .NET build artifacts
+server/bin/
+server/obj/

@@ -6,3 +6,4 @@ dist-ssr
 .env.production
 docs/.vitepress/cache
 docs/.vitepress/dist
+server/

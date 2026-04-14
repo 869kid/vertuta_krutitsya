@@ -22,4 +22,7 @@ public class WinRecord
 
     [MaxLength(100)]
     public string SessionId { get; set; } = "";
+
+    [MaxLength(12)]
+    public string? RoomCode { get; set; }
 }

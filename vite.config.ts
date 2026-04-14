@@ -43,10 +43,14 @@ export default defineConfig({
     port: 3000,
     open: true,
     proxy: {
-      '^/api.*': 'http://localhost:8000',
-      '/socket.io': {
-        target: 'http://localhost:8000',
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/hubs': {
+        target: 'http://localhost:8080',
         ws: true,
+        changeOrigin: true,
       },
     },
   },

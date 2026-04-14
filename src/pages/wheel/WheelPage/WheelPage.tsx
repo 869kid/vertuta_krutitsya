@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { historyApi } from '@api/historyApi';
+import { wheelHubApi, type VariantDto } from '@api/wheelHubApi';
 import SlotsPresetInput from '@components/Form/SlotsPresetInput/SlotsPresetInput.tsx';
 import PageContainer from '@components/PageContainer/PageContainer';
 import HistoryPanel from '@domains/winner-selection/history/HistoryPanel';
@@ -37,8 +38,10 @@ import {
   removeLotByIdDeep,
   addLotToParent,
 } from '@utils/matryoshka.utils';
+import { findVariantIdByClientId } from '@utils/roomVariantMapper';
 import { SlotListToWheelList } from '@utils/slots.utils';
 
+import RoomPanel from './RoomPanel';
 import VariantsPanel from './VariantsPanel';
 import styles from './WheelPage.module.css';
 
@@ -49,8 +52,10 @@ const WheelPage: FC = () => {
   const { navigationStack, history, currentRound } = useSelector(
     (root: RootState) => root.matryoshka,
   );
+  const { roomCode, isHost } = useSelector((root: RootState) => root.room);
   const wheelController = useRef<RandomWheelController | null>(null);
   const wheelForm = useRef<UseFormReturn<Wheel.Settings> | null>(null);
+  const serverVariantsRef = useRef<VariantDto[]>([]);
 
   const [wheelSettings, setWheelSettings] = useState<Wheel.Settings>();
   const [participants, setParticipants] = useState<WheelItem[]>();
@@ -100,10 +105,17 @@ const WheelPage: FC = () => {
 
   const handleDeleteVariant = useCallback(
     (id: string) => {
+      if (roomCode) {
+        const variantId = findVariantIdByClientId(serverVariantsRef.current, id);
+        if (variantId != null) {
+          wheelHubApi.removeVariant(roomCode, variantId);
+        }
+        return;
+      }
       const updatedSlots = removeLotByIdDeep(slots, id);
       dispatch(setSlots(cleanEmptyMultiLayerLots(updatedSlots)));
     },
-    [slots, dispatch],
+    [slots, dispatch, roomCode],
   );
 
   const handleUpdateVariant = useCallback(
@@ -116,6 +128,22 @@ const WheelPage: FC = () => {
 
   const handleAddVariant = useCallback(
     (name: string, isMultiLayer: boolean, parentId?: string, owner?: string) => {
+      if (roomCode) {
+        const clientId = Math.random().toString();
+        const parentVariantId = parentId
+          ? serverVariantsRef.current.find((v) => v.clientId === parentId)?.id ?? null
+          : null;
+        wheelHubApi.addVariant({
+          roomCode,
+          clientId,
+          name,
+          owner: owner || undefined,
+          isMultiLayer,
+          parentVariantId,
+        });
+        return;
+      }
+
       const newSlot = createSlot({
         name,
         amount: 1,
@@ -137,7 +165,7 @@ const WheelPage: FC = () => {
         }));
       }
     },
-    [slots, dispatch],
+    [slots, dispatch, roomCode],
   );
 
   const handleWin = useCallback(
@@ -175,17 +203,31 @@ const WheelPage: FC = () => {
 
       dispatch(recordWin({ lot: slot, path: pathNames }));
 
-      historyApi.recordWin({
-        lotName: slot.name || '(unnamed)',
-        owner: '',
-        round: currentRound,
-        path: pathNames,
-      });
+      if (roomCode) {
+        const variantId = findVariantIdByClientId(serverVariantsRef.current, slot.id);
+        if (variantId != null) {
+          wheelHubApi.recordWin({
+            roomCode,
+            lotName: slot.name || '(unnamed)',
+            owner: slot.owner || '',
+            round: currentRound,
+            path: pathNames,
+            variantId,
+          });
+        }
+      } else {
+        historyApi.recordWin({
+          lotName: slot.name || '(unnamed)',
+          owner: slot.owner || '',
+          round: currentRound,
+          path: pathNames,
+        });
 
-      const parentPath = navStackToParentPath(navigationStack);
-      let updatedSlots = removeLotByIdInTree(slots, slot.id, parentPath);
-      updatedSlots = cleanEmptyMultiLayerLots(updatedSlots);
-      dispatch(setSlots(updatedSlots));
+        const parentPath = navStackToParentPath(navigationStack);
+        let updatedSlots = removeLotByIdInTree(slots, slot.id, parentPath);
+        updatedSlots = cleanEmptyMultiLayerLots(updatedSlots);
+        dispatch(setSlots(updatedSlots));
+      }
 
       const remainingAfterRemoval = currentLevelSlots.filter((l) => l.id !== slot.id);
       if (navigationStack.length > 0 && remainingAfterRemoval.length === 0) {
@@ -195,7 +237,7 @@ const WheelPage: FC = () => {
       dispatch(nextRound());
       setWinnerSlot(null);
     },
-    [navigationStack, slots, currentLevelSlots, currentRound, dispatch],
+    [navigationStack, slots, currentLevelSlots, currentRound, dispatch, roomCode],
   );
 
   const handleSettingsChanged = useCallback(
@@ -269,12 +311,21 @@ const WheelPage: FC = () => {
     </Group>
   );
 
+  const handleServerVariantsChange = useCallback((variants: VariantDto[]) => {
+    serverVariantsRef.current = variants;
+  }, []);
+
   return (
     <PageContainer
       className={`${styles.container} wheel-wrapper padding`}
       classes={{ content: styles.content }}
       title={title}
     >
+      <RoomPanel
+        serverVariants={serverVariantsRef.current}
+        onServerVariantsChange={handleServerVariantsChange}
+      />
+
       {isInsideMatryoshka && (
         <MatryoshkaNavigation stack={navigationStack} onNavigate={handleBreadcrumbNavigate} />
       )}
@@ -288,6 +339,7 @@ const WheelPage: FC = () => {
             onDelete={handleDeleteVariant}
             onUpdate={handleUpdateVariant}
             importButton={importButton}
+            isReadOnly={!!roomCode && !isHost}
           />
           <RandomWheel
             initialSettings={initialSettings?.data}

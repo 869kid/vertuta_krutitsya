@@ -16,6 +16,12 @@ The left-side panel is now `VariantsPanel` + `VariantItem` (both in `src/pages/w
 ### Ghost add-card replaces Button+TextInput in VariantsPanel (2026-04-13)
 The "add variant" UI is now a ghost card (`.addCard` in `VariantsPanel.module.css`) at the top of the scroll list instead of a separate Button + TextInput above it. The card matches `VariantItem` shape but uses `dark-7` background. It contains: an unstyled `TextInput`, an `ActionIcon` with `variant='outline'` that fills on hover (`.addCardButton` class), plus `AuthorSelect` and Matryoshka checkbox. On submit, `onAdd(name, isMultiLayer, undefined, owner)` is called with pre-filled values, then all fields reset. Files: `src/pages/wheel/WheelPage/VariantsPanel.tsx`, `VariantsPanel.module.css`.
 
+### Real-time room sync via SignalR (2026-04-14)
+Multi-client wheel synchronization implemented using SignalR hub (`server/Hubs/WheelHub.cs`) with room-based groups. Architecture: REST `POST /api/room` creates a room (with optional BCrypt password), then clients join via SignalR `JoinRoom` method. Variants are stored server-side in PostgreSQL (`Variants` table, adjacency list via `ParentId` for matryoshka nesting). Host is tracked in a static `ConcurrentDictionary<string, string>` (roomCode → connectionId) — first joiner becomes host. Only host can spin (remove variants) and delete; anyone can add. Client-side: `src/api/wheelHubApi.ts` (SignalR client), `src/reducers/Room/Room.ts` (Redux slice), `src/utils/roomVariantMapper.ts` (flat VariantDto[] ↔ tree Slot[]), `src/pages/wheel/WheelPage/RoomPanel.tsx` (create/join/leave UI). All WheelPage handlers check `if (roomCode)` — hub call or local fallback. Backward compatible: local mode works exactly as before when no room is active.
+
+### CORS changed from AllowAnyOrigin to specific origins (2026-04-14)
+`server/Program.cs` CORS policy changed from `.AllowAnyOrigin()` to `.WithOrigins(allowedOrigins).AllowCredentials()`. This is **required** for SignalR — `AllowCredentials` is incompatible with `AllowAnyOrigin`. Allowed origins default to `["http://localhost:3000", "http://localhost:5173"]` and can be overridden via `AllowedOrigins` config section in `appsettings.json`. If deploying to production, add the production URL there.
+
 ### Collapsible wheel settings panel (2026-04-13)
 `WheelSettings.tsx` (`src/domains/winner-selection/wheel-of-random/settings/ui/Form/WheelSettings.tsx`) has a gear icon (`IconSettings`, `size='xl' radius='md' variant='outline'` — matching the soundtrack button style) in the top controls row. It toggles a Mantine `<Collapse>` around all settings below (Wheel Style, format, dividing, randomness source, CoreImageField). Default state is **collapsed** (`useDisclosure(false)`). The `SimpleGrid` wrapper was removed since `CoreImageField` moved inside the Collapse. The `direction` prop on `WheelSettingsProps` is still in the interface but no longer destructured or used — it can be removed from callers too.
 
@@ -23,6 +29,9 @@ The "add variant" UI is now a ghost card (`.addCard` in `VariantsPanel.module.cs
 `.wheel-controls` in `src/domains/winner-selection/wheel-of-random/ui/FullWheelUI/index.module.css` has `padding-top: 30px` to align the Spin/Duration row with the top of the variant cards on the left (accounting for the "Варианты" title height).
 
 ## Data & Formats
+
+### Room and Variant EF entities added (2026-04-14)
+`server/Models/Room.cs` — `RoomCode` (8-char uppercase, unique), `HostName`, `PasswordHash` (BCrypt, nullable), `CreatedAt`. `server/Models/Variant.cs` — `ClientId` (maps to frontend `Slot.id`), `RoomCode` (FK to Room), `ParentId` (self-FK for matryoshka tree), `Name`, `Owner`, `IsMultiLayer`, `SortOrder`. `WinRecord` gained nullable `RoomCode` field for room-scoped history. Migration: `AddRoomsAndVariants`. BCrypt.Net-Next 4.1.0 added to server csproj.
 
 ### Slot model extended with `owner` (2026-04-12)
 `Slot` interface (`src/models/slot.model.ts`) now includes `owner?: string` for tracking who suggested a variant.
@@ -74,6 +83,9 @@ Previously, if the current level had exactly 1 multi-layer slot with children, t
 
 ## Conventions
 
+### Room mode is opt-in via roomCode guard pattern (2026-04-14)
+All WheelPage handlers (`handleAddVariant`, `handleDeleteVariant`, `handleNextRound`) check `if (roomCode)` at the top. If truthy — hub call via `wheelHubApi`; if falsy — original local Redux/IndexedDB logic. This ensures backward compatibility. The `isReadOnly` prop (derived from `!!roomCode && !isHost`) is threaded through `VariantsPanel` → `VariantItem` to hide delete buttons for viewers.
+
 ### Git remotes and default branch (2026-04-13)
 Remotes were reconfigured: `origin` → `https://github.com/869kid/vertuta_krutitsya.git` (push here), `upstream` → `https://github.com/Pointauc/pointauc_frontend.git` (read-only, original fork). Default branch renamed from `master` to `main`. Plain `git push` / `git pull` works against `origin/main`. The rule in `.cursor/rules/project-knowledge.mdc` also documents this.
 
@@ -97,10 +109,48 @@ Internal helper `updateSlotAmount` in `src/reducers/Slots/Slots.ts` calls `slots
 ### normalizeSlotsChances produces NaN when total is 0 (2026-04-13)
 `PredictionService.normalizeSlotsChances` in `src/services/PredictionService.ts` divides by `getTotalSize(slots)`. If all amounts are 0, every chance becomes `NaN`. Downstream code that displays or compares these values may break silently.
 
+### Host tracking is in-memory, lost on server restart (2026-04-14)
+`WheelHub.cs` stores the host connectionId in a `static ConcurrentDictionary`. If the server restarts, all host assignments are lost. The first client to reconnect after restart becomes host. This also means horizontal scaling (multiple server instances) won't work without switching to a distributed store (e.g. Redis backplane for SignalR).
+
+### wheelHubApi listeners accumulate if not cleaned up (2026-04-14)
+`RoomPanel.tsx` registers `onJoinedRoom`, `onVariantAdded`, `onVariantRemoved`, `onError` listeners in `handleCreate`/`handleJoin`. These are cleaned up via `wheelHubApi.removeAllListeners()` on leave, but if the component unmounts without calling leave (e.g. navigation away), listeners leak. Consider adding a cleanup `useEffect` return.
+
 ### JSON parser passes garbage objects through without validation (2026-04-13)
 `parseJSON` in `src/domains/auction/archive/lib/parsers/jsonParser.ts` casts non-string array items directly to `ArchivedLot` without checking they have `name`/`amount` fields. Malformed JSON like `[{"garbage": true}]` will produce invalid lot objects that may cause crashes later in the pipeline.
 
 ## Open Tasks
 
-### CI workflow still references `master` (2026-04-13)
-`.github/workflows/deploy-production.yml` triggers on `push.branches: [master]`. Now that the default branch is `main`, the workflow will never trigger. Change the trigger to `main` when ready to use CI.
+### ~~CI workflow still references `master`~~ RESOLVED (2026-04-14)
+Fixed: `deploy-production.yml` trigger changed from `master` to `main`. Duplicate YAML block removed (was 177 lines, now 89). Both production and staging workflows now pass `VITE_HISTORY_API_URL` env var to the build step.
+
+### Room cleanup / TTL not implemented (2026-04-14)
+Rooms and their variants persist in PostgreSQL indefinitely. There is no cleanup job or TTL. Old rooms accumulate over time. Consider adding a background service or scheduled task to delete rooms older than N hours.
+
+## Architecture Decisions
+
+### Docker Compose full-stack setup (2026-04-14)
+`docker-compose.yml` defines three services: `db` (PostgreSQL 16-alpine, no host port — internal only), `server` (.NET backend on 8080), `frontend` (nginx on host port 3000). Frontend nginx proxies `/api/` and `/hubs/` to `http://server:8080` (Docker network DNS). WebSocket upgrade headers are set on `/hubs/` for SignalR. `VITE_HISTORY_API_URL` build arg is empty by default — Vite builds with relative paths so the nginx proxy handles routing. `AllowedOrigins__0=http://localhost:3000` is set on the server for CORS. The root `Dockerfile` is frontend-only; `.dockerignore` excludes `server/` to avoid bloating the frontend build context.
+
+### nginx.conf consolidated and hardened (2026-04-14)
+`nginx/nginx.conf` — single server block (was duplicated). Includes gzip compression, security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy), `/api/` proxy, `/hubs/` WebSocket proxy, `/assets/` aggressive caching, and `/` SPA fallback. Referenced in `Dockerfile` as `COPY nginx/nginx.conf` (was `private-nginx.conf`).
+
+## Scripts & Tools
+
+### .env.example documents all environment variables (2026-04-14)
+Root `.env.example` documents Vite build-time vars (`VITE_HISTORY_API_URL`, `VITE_DONATEX_CLIENT_ID`), Docker Compose vars (`POSTGRES_*`), and .NET server vars (`AllowedOrigins__0`, `ConnectionStrings__DefaultConnection`). Useful for onboarding and production deploys.
+
+## Known Issues & Gotchas
+
+### API_BASE used `||` instead of `??` — broke Docker builds (2026-04-14)
+`src/api/wheelHubApi.ts` line 3: `VITE_HISTORY_API_URL || 'http://localhost:8080'` treated empty string (set intentionally for Docker/nginx proxy builds) as falsy, falling back to localhost. Fixed by switching to `??` (nullish coalescing). Empty string = relative URLs for nginx proxy; undefined = localhost for dev; explicit URL = that URL.
+
+### Vite proxy pointed to wrong port and wrong WebSocket path (2026-04-14)
+`vite.config.ts` proxy section had `http://localhost:8000` (wrong port, backend is 8080) and `/socket.io` (Socket.IO path, but app uses SignalR at `/hubs/*`). Fixed to proxy `/api` and `/hubs` (with `ws: true`) to `http://localhost:8080`. In dev mode the SignalR client builds a full URL so it bypasses the proxy, but `/api` proxy is used by REST calls with relative paths and `/hubs` proxy serves as a fallback.
+
+## Architecture Decisions
+
+### Backend hardened for production (2026-04-14)
+`server/Program.cs` — Swagger/SwaggerUI gated behind `IsDevelopment()` so it's not exposed in production. `ForwardedHeaders` middleware added (XForwardedFor + XForwardedProto) before CORS for correct client IP/scheme behind reverse proxy. Health check endpoint at `/health` registered via `AddHealthChecks()` + `MapHealthChecks("/health")` — no external NuGet needed, uses built-in ASP.NET Core health checks. `server/Dockerfile` — runtime container runs as non-root `appuser` (adduser + USER directive). `server/appsettings.json` — `AllowedOrigins` array added with localhost defaults so the config section is explicit (previously only existed as a fallback in code).
+
+### DEPLOYMENT.md comprehensive deployment guide (2026-04-14)
+`DEPLOYMENT.md` in project root — covers local dev (backend via Docker Compose + frontend via Vite), full Docker stack (all 3 services), production CI/CD (GitHub Actions for production and staging), required GitHub Secrets (8 total: SSH_*, VITE_*_PRODUCTION, VITE_*_STAGING), server-side nginx example config, manual backend deployment steps, environment variable reference (Vite build-time, .NET runtime, Docker Compose), architecture diagrams (Mermaid), and troubleshooting section (CORS, WebSocket, SSG, DB, port conflicts). Cross-checked against all config files on 2026-04-14. Known limitation: the .NET backend is not deployed via CI — it's manual (Docker or direct dotnet publish).

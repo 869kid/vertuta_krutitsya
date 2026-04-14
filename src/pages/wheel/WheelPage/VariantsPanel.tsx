@@ -17,6 +17,7 @@ interface VariantsPanelProps {
   onDelete: (id: string) => void;
   onUpdate: (id: string, changes: Partial<Slot>) => void;
   importButton?: ReactNode;
+  isReadOnly?: boolean;
 }
 
 const VariantsPanel: FC<VariantsPanelProps> = ({
@@ -26,6 +27,7 @@ const VariantsPanel: FC<VariantsPanelProps> = ({
   onDelete,
   onUpdate,
   importButton,
+  isReadOnly = false,
 }) => {
   const { t } = useTranslation();
   const [newName, setNewName] = useState('');
@@ -135,6 +137,7 @@ const VariantsPanel: FC<VariantsPanelProps> = ({
               onDelete={onDelete}
               onUpdate={onUpdate}
               onAddChild={handleAddChild}
+              isReadOnly={isReadOnly}
             />
           ))}
         </Stack>

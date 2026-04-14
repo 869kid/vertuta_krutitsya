@@ -669,6 +669,24 @@
       "classic": "Классическое"
     },
     "wheel": "Колесо",
+    "room": {
+      "connected": "Комната",
+      "host": "Хост",
+      "viewer": "Зритель",
+      "copyCode": "Код",
+      "leave": "Выйти",
+      "create": "Создать комнату",
+      "join": "Войти в комнату",
+      "createTitle": "Создать комнату",
+      "joinTitle": "Войти в комнату",
+      "hostNameLabel": "Ваше имя",
+      "hostNamePlaceholder": "Имя...",
+      "passwordLabel": "Пароль (необязательно)",
+      "passwordPlaceholder": "Оставьте пустым для открытой комнаты",
+      "roomCodeLabel": "Код комнаты",
+      "createButton": "Создать",
+      "joinButton": "Войти"
+    },
     "navigation": {
       "home": "Домой",
       "back": "Назад"

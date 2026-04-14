@@ -909,6 +909,24 @@
       "verifyAt": "Verify at"
     },
     "wheel": "Wheel",
+    "room": {
+      "connected": "Room",
+      "host": "Host",
+      "viewer": "Viewer",
+      "copyCode": "Code",
+      "leave": "Leave",
+      "create": "Create room",
+      "join": "Join room",
+      "createTitle": "Create a room",
+      "joinTitle": "Join a room",
+      "hostNameLabel": "Your name",
+      "hostNamePlaceholder": "Name...",
+      "passwordLabel": "Password (optional)",
+      "passwordPlaceholder": "Leave empty for open room",
+      "roomCodeLabel": "Room code",
+      "createButton": "Create",
+      "joinButton": "Join"
+    },
     "navigation": {
       "home": "Home",
       "back": "Back"
