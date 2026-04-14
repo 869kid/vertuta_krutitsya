@@ -62,3 +62,9 @@ Documentation
 - Keep descriptions clear and concise, so the developer can quickly grab an idea by a glance.
 - omit examples and code snippets from comments and jsdocs. Keep jsdocs short and clean unless there is a specifically complex and unintuitive logic.
 - DO NOT WRITE DOCS UNLESS EXPLICITLY ASKED TO
+
+Subagents:
+
+- When spawning subagents via the Task tool, always set the model to either `claude-4.6-opus-high-thinking` or `claude-4.6-sonnet-medium-thinking`. Never use the default `fast` model.
+- Use `claude-4.6-sonnet-medium-thinking` for routine tasks (search, simple edits, quick exploration).
+- Use `claude-4.6-opus-high-thinking` for complex reasoning, architecture decisions, or multi-step tasks.

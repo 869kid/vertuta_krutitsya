@@ -3,7 +3,6 @@ import {
   Badge,
   Card,
   Container,
-  Grid,
   Group,
   Loader,
   Paper,
@@ -13,13 +12,13 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconCrown, IconHistory, IconTrophy, IconUsers } from '@tabler/icons-react';
-import { useCallback, useEffect, useState } from 'react';
+import { IconTrophy, IconUsers } from '@tabler/icons-react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { historyApi, SessionDto, SessionDetailDto, StatsDto } from '@api/historyApi';
 import PageContainer from '@components/PageContainer/PageContainer';
 
-function formatDate(ts: string): string {
+const formatDate = (ts: string): string => {
   const d = new Date(ts);
   return d.toLocaleDateString('ru-RU', {
     day: '2-digit',
@@ -28,7 +27,7 @@ function formatDate(ts: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
+};
 
 const StatCard = ({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | string; color: string }) => (
   <Card withBorder padding='lg' radius='md'>
@@ -62,6 +61,15 @@ const HistoryDashboard = () => {
         ]);
         setStats(statsData);
         setSessions(sessionsData);
+
+        const details = await Promise.all(
+          sessionsData.map((s) => historyApi.getSession(s.sessionId)),
+        );
+        const detailsMap: Record<string, SessionDetailDto> = {};
+        for (const d of details) {
+          detailsMap[d.sessionId] = d;
+        }
+        setSessionDetails(detailsMap);
       } catch (err) {
         setError('Failed to connect to server. Make sure the backend is running (docker-compose up).');
       } finally {
@@ -71,15 +79,7 @@ const HistoryDashboard = () => {
     load();
   }, []);
 
-  const loadSessionDetail = useCallback(async (sessionId: string) => {
-    if (sessionDetails[sessionId]) return;
-    try {
-      const detail = await historyApi.getSession(sessionId);
-      setSessionDetails((prev) => ({ ...prev, [sessionId]: detail }));
-    } catch {
-      // ignore
-    }
-  }, [sessionDetails]);
+  const allSessionIds = useMemo(() => sessions.map((s) => s.sessionId), [sessions]);
 
   if (loading) {
     return (
@@ -101,79 +101,44 @@ const HistoryDashboard = () => {
     );
   }
 
-  const topLotEntries = stats ? Object.entries(stats.topLots).sort((a, b) => b[1] - a[1]) : [];
   const topWinnerEntries = stats ? Object.entries(stats.topWinners).sort((a, b) => b[1] - a[1]) : [];
-  const maxLotCount = topLotEntries.length > 0 ? topLotEntries[0][1] : 1;
   const maxWinnerCount = topWinnerEntries.length > 0 ? topWinnerEntries[0][1] : 1;
 
   return (
     <PageContainer title={<Title order={1}>History Dashboard</Title>}>
       <Container size='lg' py='md'>
         <Stack gap='lg'>
-          <Grid>
-            <Grid.Col span={{ base: 12, sm: 4 }}>
-              <StatCard icon={<IconHistory size={28} />} label='Sessions' value={stats?.totalSessions ?? 0} color='blue' />
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, sm: 4 }}>
-              <StatCard icon={<IconTrophy size={28} />} label='Total Wins' value={stats?.totalWins ?? 0} color='green' />
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, sm: 4 }}>
-              <StatCard icon={<IconCrown size={28} />} label='Total Rounds' value={stats?.totalRounds ?? 0} color='violet' />
-            </Grid.Col>
-          </Grid>
+          <StatCard icon={<IconTrophy size={28} />} label='Winning Variants' value={stats?.totalWins ?? 0} color='green' />
 
-          <Grid>
-            {topLotEntries.length > 0 && (
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <Card withBorder padding='lg' radius='md'>
-                  <Title order={4} mb='md'>Top Lots</Title>
-                  <Stack gap='xs'>
-                    {topLotEntries.map(([name, count]) => (
-                      <div key={name}>
-                        <Group justify='space-between' mb={4}>
-                          <Text size='sm' fw={500}>{name}</Text>
-                          <Badge size='sm' variant='light'>{count}</Badge>
-                        </Group>
-                        <Progress value={(count / maxLotCount) * 100} size='sm' radius='xl' />
-                      </div>
-                    ))}
-                  </Stack>
-                </Card>
-              </Grid.Col>
-            )}
-
-            {topWinnerEntries.length > 0 && (
-              <Grid.Col span={{ base: 12, md: 6 }}>
-                <Card withBorder padding='lg' radius='md'>
-                  <Group mb='md'>
-                    <IconUsers size={20} />
-                    <Title order={4}>Top Authors</Title>
-                  </Group>
-                  <Stack gap='xs'>
-                    {topWinnerEntries.map(([name, count]) => (
-                      <div key={name}>
-                        <Group justify='space-between' mb={4}>
-                          <Text size='sm' fw={500}>{name}</Text>
-                          <Badge size='sm' variant='light'>{count}</Badge>
-                        </Group>
-                        <Progress value={(count / maxWinnerCount) * 100} size='sm' radius='xl' color='teal' />
-                      </div>
-                    ))}
-                  </Stack>
-                </Card>
-              </Grid.Col>
-            )}
-          </Grid>
+          {topWinnerEntries.length > 0 && (
+            <Card withBorder padding='lg' radius='md'>
+              <Group mb='md'>
+                <IconUsers size={20} />
+                <Title order={4}>Top Authors</Title>
+              </Group>
+              <Stack gap='xs'>
+                {topWinnerEntries.map(([name, count]) => (
+                  <div key={name}>
+                    <Group justify='space-between' mb={4}>
+                      <Text size='sm' fw={500}>{name}</Text>
+                      <Badge size='sm' variant='light'>{count}</Badge>
+                    </Group>
+                    <Progress value={(count / maxWinnerCount) * 100} size='sm' radius='xl' color='teal' />
+                  </div>
+                ))}
+              </Stack>
+            </Card>
+          )}
 
           <Card withBorder padding='lg' radius='md'>
             <Title order={4} mb='md'>Sessions</Title>
             {sessions.length === 0 ? (
               <Text c='dimmed' ta='center' py='lg'>No sessions yet</Text>
             ) : (
-              <Accordion variant='separated'>
+              <Accordion variant='separated' multiple defaultValue={allSessionIds}>
                 {sessions.map((session) => (
                   <Accordion.Item key={session.sessionId} value={session.sessionId}>
-                    <Accordion.Control onClick={() => loadSessionDetail(session.sessionId)}>
+                    <Accordion.Control>
                       <Group justify='space-between' wrap='nowrap' pr='md'>
                         <div>
                           <Text fw={500}>{session.name}</Text>

@@ -244,5 +244,8 @@ Host tracking removed entirely. No `RoomHosts` dictionary in `WheelHub.cs`.
 ### ~~Room cleanup / TTL not implemented~~ REDUCED SCOPE (2026-04-14)
 Only one room (`DEFAULT`) exists now. Variants still accumulate if not consumed by spins, but room proliferation is no longer an issue.
 
+### Frontend served via Docker, not Vite dev server (2026-04-14)
+The dev workflow uses `docker compose up --build` (not `pnpm dev`). Frontend is built inside Docker and served by nginx on port 3000, with ngrok tunneling for external access. This means code changes require `docker compose up --build -d` to take effect — a browser refresh alone won't pick up changes. The Vite dev server is not running. Keep this in mind when making changes: always rebuild Docker after modifying frontend or backend code.
+
 ### UpdateVariant hub method — room-mode variant editing (2026-04-14)
 `handleUpdateVariant` in `WheelPage.tsx` was local-only (Redux `updateLotInTree` + `setSlots`). In room mode, renaming a child variant or toggling matryoshka would revert on the next `onVariantAdded`/`onVariantRemoved` event because the tree is rebuilt from `currentVariants` (server data). Fix: added `UpdateVariant` method to `server/Hubs/WheelHub.cs` (updates `Name`, `Owner`, `IsMultiLayer` in DB, broadcasts `VariantUpdated` to room group), `updateVariant()` to `src/api/wheelHubApi.ts`, `onVariantUpdated` listener registration in `RoomPanel.tsx`, and `handleUpdateVariant` now calls `wheelHubApi.updateVariant()` when `roomCode` is set. DTO: `UpdateVariantRequest` in `server/Models/Dtos.cs` — all fields except `RoomCode`/`VariantId` are nullable (partial update).
