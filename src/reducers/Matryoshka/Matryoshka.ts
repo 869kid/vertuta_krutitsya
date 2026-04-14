@@ -56,7 +56,7 @@ const matryoshkaSlice = createSlice({
         timestamp: Date.now(),
         path: action.payload.path,
         lotName: action.payload.lot.name || '(unnamed)',
-        owner: '',
+        owner: action.payload.lot.owner || '',
         round: state.currentRound,
       };
       state.history.unshift(record);

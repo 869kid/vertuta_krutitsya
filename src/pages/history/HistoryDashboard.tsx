@@ -14,6 +14,7 @@ import {
 } from '@mantine/core';
 import { IconTrophy, IconUsers } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { historyApi, SessionDto, SessionDetailDto, StatsDto } from '@api/historyApi';
 import PageContainer from '@components/PageContainer/PageContainer';
@@ -46,10 +47,11 @@ const StatCard = ({ icon, label, value, color }: { icon: React.ReactNode; label:
 );
 
 const HistoryDashboard = () => {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<StatsDto | null>(null);
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [sessionDetails, setSessionDetails] = useState<Record<string, SessionDetailDto>>({});
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,18 +72,18 @@ const HistoryDashboard = () => {
           detailsMap[d.sessionId] = d;
         }
         setSessionDetails(detailsMap);
-      } catch (err) {
-        setError('Failed to connect to server. Make sure the backend is running (docker-compose up).');
+      } catch {
+        setError(t('historyDashboard.connectionError'));
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
     load();
-  }, []);
+  }, [t]);
 
-  const allSessionIds = useMemo(() => sessions.map((s) => s.sessionId), [sessions]);
+  const defaultOpenSessionIds = useMemo(() => sessions.map((s) => s.sessionId), [sessions]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Container py='xl'>
         <Group justify='center' py='xl'>
@@ -105,16 +107,16 @@ const HistoryDashboard = () => {
   const maxWinnerCount = topWinnerEntries.length > 0 ? topWinnerEntries[0][1] : 1;
 
   return (
-    <PageContainer title={<Title order={1}>History Dashboard</Title>}>
+    <PageContainer title={<Title order={1}>{t('historyDashboard.title')}</Title>}>
       <Container size='lg' py='md'>
         <Stack gap='lg'>
-          <StatCard icon={<IconTrophy size={28} />} label='Winning Variants' value={stats?.totalWins ?? 0} color='green' />
+          <StatCard icon={<IconTrophy size={28} />} label={t('historyDashboard.winningVariants')} value={stats?.totalWins ?? 0} color='green' />
 
           {topWinnerEntries.length > 0 && (
             <Card withBorder padding='lg' radius='md'>
               <Group mb='md'>
                 <IconUsers size={20} />
-                <Title order={4}>Top Authors</Title>
+                <Title order={4}>{t('historyDashboard.topAuthors')}</Title>
               </Group>
               <Stack gap='xs'>
                 {topWinnerEntries.map(([name, count]) => (
@@ -131,11 +133,11 @@ const HistoryDashboard = () => {
           )}
 
           <Card withBorder padding='lg' radius='md'>
-            <Title order={4} mb='md'>Sessions</Title>
+            <Title order={4} mb='md'>{t('historyDashboard.sessions')}</Title>
             {sessions.length === 0 ? (
-              <Text c='dimmed' ta='center' py='lg'>No sessions yet</Text>
+              <Text c='dimmed' ta='center' py='lg'>{t('historyDashboard.noSessions')}</Text>
             ) : (
-              <Accordion variant='separated' multiple defaultValue={allSessionIds}>
+              <Accordion variant='separated' multiple defaultValue={defaultOpenSessionIds}>
                 {sessions.map((session) => (
                   <Accordion.Item key={session.sessionId} value={session.sessionId}>
                     <Accordion.Control>
@@ -145,8 +147,8 @@ const HistoryDashboard = () => {
                           <Text size='xs' c='dimmed'>{formatDate(session.createdAt)}</Text>
                         </div>
                         <Group gap='xs'>
-                          <Badge variant='light'>{session.winCount} wins</Badge>
-                          <Badge variant='light' color='violet'>{session.totalRounds} rounds</Badge>
+                          <Badge variant='light'>{t('historyDashboard.winsCount', { count: session.winCount })}</Badge>
+                          <Badge variant='light' color='violet'>{t('historyDashboard.roundsCount', { count: session.totalRounds })}</Badge>
                         </Group>
                       </Group>
                     </Accordion.Control>
@@ -156,10 +158,10 @@ const HistoryDashboard = () => {
                           <Table.Thead>
                             <Table.Tr>
                               <Table.Th>#</Table.Th>
-                              <Table.Th>Lot</Table.Th>
-                              <Table.Th>Author</Table.Th>
-                              <Table.Th>Path</Table.Th>
-                              <Table.Th>Time</Table.Th>
+                              <Table.Th>{t('historyDashboard.lot')}</Table.Th>
+                              <Table.Th>{t('historyDashboard.author')}</Table.Th>
+                              <Table.Th>{t('historyDashboard.path')}</Table.Th>
+                              <Table.Th>{t('historyDashboard.time')}</Table.Th>
                             </Table.Tr>
                           </Table.Thead>
                           <Table.Tbody>

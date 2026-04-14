@@ -46,6 +46,7 @@ const listeners: {
   onVariantRemoved: EventCallback<number>[];
   onWinRecorded: EventCallback<WinRecordDto>[];
   onSpinStarted: EventCallback<SpinStartedDto>[];
+  onReconnected: EventCallback<ConnectedPayload>[];
   onError: EventCallback<string>[];
 } = {
   onConnected: [],
@@ -54,6 +55,7 @@ const listeners: {
   onVariantRemoved: [],
   onWinRecorded: [],
   onSpinStarted: [],
+  onReconnected: [],
   onError: [],
 };
 
@@ -94,6 +96,17 @@ export const wheelHubApi = {
 
     connection = buildConnection();
     registerHandlers(connection);
+
+    connection.onreconnected(async () => {
+      if (!connection) return;
+      try {
+        const data = await connection.invoke<ConnectedPayload>('GetCurrentState');
+        listeners.onReconnected.forEach((cb) => cb(data));
+      } catch {
+        listeners.onError.forEach((cb) => cb('Failed to re-sync after reconnect'));
+      }
+    });
+
     await connection.start();
   },
 
@@ -154,6 +167,7 @@ export const wheelHubApi = {
     owner: string;
     round: number;
     path: string[];
+    sessionId?: string;
   }): Promise<void> {
     if (!connection) return;
     await connection.invoke('ConfirmRound', request);
@@ -178,6 +192,7 @@ export const wheelHubApi = {
     listeners.onVariantRemoved = [];
     listeners.onWinRecorded = [];
     listeners.onSpinStarted = [];
+    listeners.onReconnected = [];
     listeners.onError = [];
   },
 

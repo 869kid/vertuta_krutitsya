@@ -1209,6 +1209,20 @@
     },
     "newArchiveName": "Архив {{date}}"
   },
+  "historyDashboard": {
+    "title": "История розыгрышей",
+    "winningVariants": "Выигравшие варианты",
+    "topAuthors": "Топ авторов",
+    "sessions": "Сессии",
+    "noSessions": "Пока нет сессий",
+    "winsCount": "{{count}} побед",
+    "roundsCount": "{{count}} раундов",
+    "lot": "Лот",
+    "author": "Автор",
+    "path": "Путь",
+    "time": "Время",
+    "connectionError": "Не удалось подключиться к серверу. Убедитесь, что бэкенд запущен."
+  },
   "testEnvironmentModal": {
     "title": "Тестовое окружение",
     "description": "Сейчас вы используете тестовое окружение. Эта версия может работать нестабильно по сравнению с основным сайтом.",

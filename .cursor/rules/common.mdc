@@ -63,6 +63,13 @@ Documentation
 - omit examples and code snippets from comments and jsdocs. Keep jsdocs short and clean unless there is a specifically complex and unintuitive logic.
 - DO NOT WRITE DOCS UNLESS EXPLICITLY ASKED TO
 
+Wheel Architecture Gotchas (read before modifying WheelPage or FullWheelUI):
+
+- `WheelPage.tsx` maintains TWO representations of variant data: a flat `VariantDto[]` in `serverVariantsRef` and a tree `Slot[]` in Redux. When adding SignalR operations, always update BOTH the ref (via listener callbacks) and dispatch to Redux (via `variantsToSlots`).
+- `FullWheelUI` copies `items` prop into `useState` on mount and NEVER syncs from props again. The only way to update the wheel is via `wheelController.current.setItems(items)`. Do not assume changing the prop updates the wheel.
+- When `onRequestSpin` is provided (always in current code), `onSpinClick` calls it and returns immediately — none of the local seed generation or spin logic runs. The "room mode" and "local mode" paths diverge completely at this early return.
+- Only `setSlots`, `setSlotsInitialized`, and `createSlot` from `@reducers/Slots/Slots` are actively used. All other exported actions (`addSlotAmount`, `setSlotExtra`, `mergeLot`, `setLockedPercentage`, etc.) are legacy dead code from the Pointauc auction feature.
+
 Subagents:
 
 - When spawning subagents via the Task tool, always set the model to either `claude-4.6-opus-high-thinking` or `claude-4.6-sonnet-medium-thinking`. Never use the default `fast` model.

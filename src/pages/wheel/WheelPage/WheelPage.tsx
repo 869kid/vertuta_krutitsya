@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { wheelHubApi, type VariantDto, type SpinStartedDto } from '@api/wheelHubApi';
+import { historyApi } from '@api/historyApi';
 import SlotsPresetInput from '@components/Form/SlotsPresetInput/SlotsPresetInput.tsx';
 import PageContainer from '@components/PageContainer/PageContainer';
 import HistoryPanel from '@domains/winner-selection/history/HistoryPanel';
@@ -26,8 +27,8 @@ import {
   navigateBackTo,
   recordWin,
   nextRound,
+  setSpinning,
 } from '@reducers/Matryoshka/Matryoshka';
-import { connected, disconnected, setConnectionError } from '@reducers/Room/Room';
 import { setSlots } from '@reducers/Slots/Slots';
 import { getLotsAtPath } from '@utils/matryoshka.utils';
 import { findVariantIdByClientId, variantsToSlots } from '@utils/roomVariantMapper';
@@ -40,7 +41,7 @@ const WheelPage: FC = () => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const { slots, isInitialized } = useSelector((root: RootState) => root.slots);
-  const { navigationStack, history, currentRound } = useSelector(
+  const { navigationStack, history, currentRound, isSpinning } = useSelector(
     (root: RootState) => root.matryoshka,
   );
   const wheelController = useRef<RandomWheelController | null>(null);
@@ -48,7 +49,6 @@ const WheelPage: FC = () => {
   const serverVariantsRef = useRef<VariantDto[]>([]);
 
   const [wheelSettings, setWheelSettings] = useState<Wheel.Settings>();
-  const [participants, setParticipants] = useState<WheelItem[]>();
   const [historyOpened, historyHandlers] = useDisclosure(false);
   const [clickedSegmentSlot, setClickedSegmentSlot] = useState<Slot | null>(null);
   const [winnerSlot, setWinnerSlot] = useState<Slot | null>(null);
@@ -79,13 +79,16 @@ const WheelPage: FC = () => {
   useEffect(() => {
     const variantsRef = serverVariantsRef;
 
+    const syncVariants = (variants: VariantDto[]) => {
+      variantsRef.current = variants;
+      dispatch(setSlots(variantsToSlots(variants)));
+    };
+
     const setupConnection = async () => {
       try {
-        wheelHubApi.on('onConnected', (data) => {
-          variantsRef.current = data.variants;
-          dispatch(setSlots(variantsToSlots(data.variants)));
-          dispatch(connected());
-        });
+        wheelHubApi.on('onConnected', (data) => syncVariants(data.variants));
+
+        wheelHubApi.on('onReconnected', (data) => syncVariants(data.variants));
 
         wheelHubApi.on('onVariantAdded', (variant) => {
           variantsRef.current = [...variantsRef.current, variant];
@@ -105,16 +108,18 @@ const WheelPage: FC = () => {
         });
 
         wheelHubApi.on('onSpinStarted', (data: SpinStartedDto) => {
-          wheelController.current?.triggerServerSpin(data.winnerClientId, data.duration, data.seed);
+          dispatch(setSpinning(true));
+          wheelController.current?.triggerServerSpin(data.winnerClientId, data.duration, data.seed)
+            .finally(() => dispatch(setSpinning(false)));
         });
 
         wheelHubApi.on('onError', (msg) => {
-          dispatch(setConnectionError(msg));
+          console.warn('[WheelHub]', msg);
         });
 
         await wheelHubApi.connect();
       } catch (err) {
-        dispatch(setConnectionError(String(err)));
+        console.error('[WheelHub] Connection failed:', err);
       }
     };
 
@@ -123,7 +128,6 @@ const WheelPage: FC = () => {
     return () => {
       wheelHubApi.removeAllListeners();
       wheelHubApi.disconnect();
-      dispatch(disconnected());
     };
   }, [dispatch]);
 
@@ -138,16 +142,6 @@ const WheelPage: FC = () => {
     [dispatch],
   );
 
-  const deleteItem = useCallback(
-    (id: Key) => {
-      const variantId = findVariantIdByClientId(serverVariantsRef.current, id.toString());
-      if (variantId != null) {
-        wheelHubApi.removeVariant(variantId);
-      }
-    },
-    [],
-  );
-
   const handleDeleteVariant = useCallback(
     (id: string) => {
       const variantId = findVariantIdByClientId(serverVariantsRef.current, id);
@@ -156,6 +150,11 @@ const WheelPage: FC = () => {
       }
     },
     [],
+  );
+
+  const deleteItem = useCallback(
+    (id: Key) => handleDeleteVariant(id.toString()),
+    [handleDeleteVariant],
   );
 
   const handleUpdateVariant = useCallback(
@@ -202,9 +201,10 @@ const WheelPage: FC = () => {
 
   const handleRequestSpin = useCallback(
     (duration: number) => {
+      if (isSpinning) return;
       wheelHubApi.requestSpin(duration, currentParentVariantId);
     },
-    [currentParentVariantId],
+    [currentParentVariantId, isSpinning],
   );
 
   const handleNavigateInto = useCallback(
@@ -240,6 +240,7 @@ const WheelPage: FC = () => {
           round: currentRound,
           path: pathNames,
           variantId,
+          sessionId: historyApi.getSessionId(),
         });
       }
 
@@ -350,7 +351,6 @@ const WheelPage: FC = () => {
             items={wheelItems}
             deleteItem={deleteItem}
             wheelRef={wheelController}
-            onWheelItemsChanged={setParticipants}
             onSettingsChanged={handleSettingsChanged}
             form={wheelForm}
             onWin={handleWin}

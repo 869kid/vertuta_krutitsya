@@ -106,10 +106,46 @@ public class WheelHub : Hub
 
         if (variant == null) return;
 
+        var descendantIds = await GetDescendantIds(request.VariantId);
+
         _db.Variants.Remove(variant);
         await _db.SaveChangesAsync();
 
+        foreach (var id in descendantIds)
+        {
+            await Clients.Group(GroupName).SendAsync("VariantRemoved", id);
+        }
         await Clients.Group(GroupName).SendAsync("VariantRemoved", request.VariantId);
+    }
+
+    public async Task<object> GetCurrentState()
+    {
+        var variants = await _db.Variants
+            .Where(v => v.RoomCode == DefaultRoom)
+            .OrderBy(v => v.SortOrder)
+            .Select(v => new VariantResponse(
+                v.Id, v.ClientId, v.Name, v.Owner, v.IsMultiLayer, v.ParentId, v.SortOrder, v.CreatedAt
+            ))
+            .ToListAsync();
+
+        return new { variants };
+    }
+
+    private async Task<List<int>> GetDescendantIds(int parentId)
+    {
+        var result = new List<int>();
+        var childIds = await _db.Variants
+            .Where(v => v.ParentId == parentId)
+            .Select(v => v.Id)
+            .ToListAsync();
+
+        foreach (var childId in childIds)
+        {
+            result.AddRange(await GetDescendantIds(childId));
+            result.Add(childId);
+        }
+
+        return result;
     }
 
     public async Task RequestSpin(RequestSpinRequest request)
@@ -144,6 +180,23 @@ public class WheelHub : Hub
             _db.Variants.Remove(variant);
         }
 
+        var sessionId = request.SessionId ?? "";
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            var session = await _db.Sessions.FirstOrDefaultAsync(s => s.SessionId == sessionId);
+            if (session == null)
+            {
+                session = new Session
+                {
+                    SessionId = sessionId,
+                    Name = $"Session {DateTime.UtcNow:yyyy-MM-dd HH:mm}",
+                };
+                _db.Sessions.Add(session);
+            }
+            session.TotalRounds = Math.Max(session.TotalRounds, request.Round);
+        }
+
         var winRecord = new WinRecord
         {
             LotName = request.LotName,
@@ -151,7 +204,7 @@ public class WheelHub : Hub
             Round = request.Round,
             Path = request.Path,
             RoomCode = DefaultRoom,
-            SessionId = "",
+            SessionId = sessionId,
         };
 
         _db.WinRecords.Add(winRecord);

@@ -43,11 +43,3 @@ export const findVariantIdByClientId = (
   variants: VariantDto[],
   clientId: string,
 ): number | undefined => variants.find((v) => v.clientId === clientId)?.id;
-
-/**
- * Finds the server-side parent variant ID for a sub-lot add operation.
- */
-export const findParentVariantId = (
-  variants: VariantDto[],
-  parentClientId: string,
-): number | undefined => variants.find((v) => v.clientId === parentClientId)?.id;

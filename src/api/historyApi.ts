@@ -59,22 +59,6 @@ export const historyApi = {
     localStorage.setItem(SESSION_KEY, id);
   },
 
-  async recordWin(data: {
-    lotName: string;
-    owner: string;
-    round: number;
-    path: string[];
-  }): Promise<void> {
-    try {
-      await api.post('/api/history', {
-        ...data,
-        sessionId: getOrCreateSessionId(),
-      });
-    } catch (err) {
-      console.warn('Failed to sync win to server:', err);
-    }
-  },
-
   async getHistory(sessionId?: string, roomCode?: string): Promise<WinRecordDto[]> {
     const params: Record<string, string> = {};
     if (roomCode) params.roomCode = roomCode;

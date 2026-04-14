@@ -82,4 +82,4 @@ public record RequestSpinRequest(double Duration, int? ParentVariantId);
 
 public record SpinStartedResponse(string WinnerClientId, int WinnerId, string WinnerName, double Duration, double Seed);
 
-public record ConfirmRoundRequest(int VariantId, string LotName, string Owner, int Round, string[] Path);
+public record ConfirmRoundRequest(int VariantId, string LotName, string Owner, int Round, string[] Path, string? SessionId);
