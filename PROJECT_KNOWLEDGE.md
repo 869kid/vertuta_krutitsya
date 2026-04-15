@@ -46,6 +46,15 @@ Home and Back `ActionIcon` buttons in title bar when inside matryoshka. `Matryos
 ### Microsoft.AspNetCore.OpenApi removed (2026-04-14)
 Conflicts with Swashbuckle (`ReflectionTypeLoadException`). Removed from `VertutaServer.csproj`. Swashbuckle provides its own OpenAPI support.
 
+### Room Redux slice removed (2026-04-15)
+`src/reducers/Room/Room.ts` deleted. It stored `isConnected`/`connectionError` but no component ever read them. WheelPage no longer dispatches `connected()`/`disconnected()`/`setConnectionError()`. Connection errors are logged to console instead.
+
+### Double-spin guard via Matryoshka.isSpinning (2026-04-15)
+`WheelPage.tsx` reads `isSpinning` from `root.matryoshka`. `handleRequestSpin` returns early if `isSpinning`. `setSpinning(true)` dispatched when `onSpinStarted` fires; `setSpinning(false)` dispatched in `.finally()` after `triggerServerSpin` completes. This prevents overlapping animations and duplicate `ConfirmRound` calls.
+
+### WheelHub.GetCurrentState for reconnect (2026-04-15)
+`WheelHub.cs` exposes `GetCurrentState()` — returns `{ variants }` for the DEFAULT room. Called by `wheelHubApi` in `connection.onreconnected()` handler. NOT a broadcast — invoked directly by the reconnecting client.
+
 ## Data & Formats
 
 ### Room and Variant EF entities (2026-04-14)
@@ -54,13 +63,13 @@ Conflicts with Swashbuckle (`ReflectionTypeLoadException`). Removed from `Vertut
 ### Slot model (2026-04-12 / 2026-04-14)
 `Slot` interface (`src/models/slot.model.ts`) includes `owner?: string`. `slot.name` can be `null` — always guard with `?? ''` in form state and string operations. `createSlot` default: `amount: null`; room mapper sets `amount: 1`.
 
-### roomVariantMapper utilities (2026-04-14)
-`src/utils/roomVariantMapper.ts` — `variantsToSlots(variants)`: builds `Slot` tree from flat `VariantDto[]` adjacency list. `findVariantIdByClientId(variants, clientId)`: resolves server-side `id` for hub calls.
+### roomVariantMapper utilities (2026-04-14, updated 2026-04-15)
+`src/utils/roomVariantMapper.ts` — `variantsToSlots(variants)`: builds `Slot` tree from flat `VariantDto[]` adjacency list. `findVariantIdByClientId(variants, clientId)`: resolves server-side `id` for hub calls. `findParentVariantId` removed (was never imported).
 
 ## Scripts & Tools
 
-### Vitest test suite (2026-04-13)
-`pnpm test` runs 165 unit tests in `src/__tests__/`. Config: `vitest.config.ts`, `environment: 'node'`, `globals: true`. `.cursor/rules/testing.mdc` enforces running tests before commits. `.cursor/hooks.json` `stop` hook auto-runs tests when `.ts/.tsx` files modified.
+### Vitest test suite (2026-04-13, updated 2026-04-15)
+`pnpm test` runs 169 unit tests in `src/__tests__/`. Config: `vitest.config.ts`, `environment: 'node'`, `globals: true`. `.cursor/rules/testing.mdc` enforces running tests before commits. `.cursor/hooks.json` `stop` hook auto-runs tests when `.ts/.tsx` files modified.
 
 ### Self-hosting scripts (2026-04-14)
 `scripts/setup.sh` — checks Docker >= 24 & Compose v2, copies `.env.example` → `.env`, `docker compose up --build -d`, polls up to 120s, runs smoke tests. `scripts/smoke-test.sh` — 8 checks (containers, frontend HTTP 200, API `/health`, nginx proxy, WebSocket, PostgreSQL). `scripts/teardown.sh` — `docker compose down`; `--clean` deletes DB data.
@@ -87,6 +96,12 @@ If `getSnapshot` returns a new reference each call, React infinite re-renders. C
 
 ### PowerShell incompatibilities (2026-04-14)
 `$(cat <<'EOF' ... EOF)` fails in PowerShell. Use multiple `-m` flags for multi-line git commits. `&&` may fail — use `;`.
+
+### HistoryDashboard i18n keys (2026-04-15)
+`historyDashboard.*` namespace in `en.json`/`ru.json` — keys: `title`, `winningVariants`, `topAuthors`, `sessions`, `noSessions`, `winsCount`, `roundsCount`, `lot`, `author`, `path`, `time`, `connectionError`.
+
+### Dead files removed (2026-04-15)
+Deleted: `AddLotPopover.tsx`, `MatryoshkaBreadcrumb.tsx` (both in `src/domains/winner-selection/matryoshka/`), `src/reducers/Room/Room.ts`. Removed: `historyApi.recordWin()` method (recording goes through SignalR `ConfirmRound`). `deleteItem` in `WheelPage.tsx` now delegates to `handleDeleteVariant` — no longer a separate implementation.
 
 ## Known Issues & Gotchas
 
@@ -127,3 +142,6 @@ Variants not consumed by spins persist in PostgreSQL forever. No TTL or cleanup 
 
 ### Unused Slots reducer actions (2026-04-15)
 ~13 exported actions (`addSlotAmount`, `setSlotExtra`, `mergeLot`, `setLockedPercentage`, etc.) are legacy from Pointauc auction. They have test coverage in `slotsReducer.test.ts` but are unused in production code. Low priority — keep for now.
+
+### JSON parser passes unvalidated objects (2026-04-13)
+`parseJSON` in `src/domains/auction/archive/lib/parsers/jsonParser.ts` casts array items to `ArchivedLot` without checking for `name`/`amount` fields. Low risk since import is user-initiated.

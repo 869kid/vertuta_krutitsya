@@ -27,7 +27,8 @@
     "docker:run": "docker run --rm --name pointauc-frontend -p 3000:80 pointauc-frontend",
     "docker:up": "pnpm run docker:build && pnpm run docker:run",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "7tv": "^0.1.2",
@@ -116,6 +117,7 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.80.2",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/vite": "^4.1.18",
     "@types/classnames": "^2.3.1",
     "@types/gsap": "^3.0.0",
